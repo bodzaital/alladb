@@ -39,7 +39,7 @@ public class Transaction(Collection collection) : IDisposable
 		GC.SuppressFinalize(this);
 
 		if (Resolution == ResolutionAction.Unresolved) throw new UnresolvedTransactionException(
-			"The transaction must be resolved before control leaves the block of the using statement."
+			"The transaction must be resolved before it is disposed."
 		);
 
 		if (Resolution == ResolutionAction.Commit)
