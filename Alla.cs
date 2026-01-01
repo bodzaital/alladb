@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Collections.ObjectModel;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using AllaDb.Exceptions;
 using Microsoft.Extensions.Options;
@@ -46,6 +47,8 @@ public class Alla : IAlla
 
 		return collection;
 	}
+
+	public ReadOnlyCollection<Collection> GetCollections() => new(Collections);
 
 	public void Persist()
 	{

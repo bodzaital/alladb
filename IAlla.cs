@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+
 namespace AllaDb;
 
 public interface IAlla
@@ -7,6 +9,8 @@ public interface IAlla
 	void DropCollection(string collectionName);
 
 	Collection GetCollection(string collectionName);
+
+	ReadOnlyCollection<Collection> GetCollections();
 
 	void Persist();
 }
