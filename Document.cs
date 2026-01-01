@@ -57,6 +57,8 @@ public class Document(Dictionary<string, object?> fields)
 		return hasField;
 	}
 
+	public ReadOnlyDictionary<string, object?> GetFields() => TxFields();
+
 	private ReadOnlyDictionary<string, object?> TxFields()
 	{
 		if (Collection?.Transaction is null) return new(Fields);
