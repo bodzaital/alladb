@@ -21,6 +21,10 @@ public class MyConsumerClass(IAlla db)
 }
 ```
 
+Available options:
+- AddDataSource(string dataSource): specify a relative path as the data source for persistance (otherwise it will be just an in-memory DB)
+- WithRequiredTransactions(): specify that all collection/document level modifying operations require a transaction (otherwise transactions are not required)
+
 Grab a reference to a collection (creates one if it does not exist):
 
 ```c#
