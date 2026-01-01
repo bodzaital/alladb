@@ -56,6 +56,8 @@ public class Collection(string name)
 		return Transaction;
 	}
 
+	public ReadOnlyCollection<Document> GetDocuments() => new(TxDocuments());
+
 	internal ReadOnlyCollection<Document> TxDocuments()
 	{
 		if (Transaction is null) return new(Documents);
