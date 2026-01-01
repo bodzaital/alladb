@@ -2,5 +2,11 @@ namespace AllaDb;
 
 public class AllaOptions
 {
-	public required string DataSource { get; init; }
+	internal string DataSource { get; set; } = ":memory:";
+
+	public AllaOptions AddDataSource(string dataSource)
+	{
+		DataSource = dataSource;
+		return this;
+	}
 }

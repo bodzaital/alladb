@@ -1,5 +1,4 @@
-﻿using System.Collections.ObjectModel;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using AllaDb.Exceptions;
 using Microsoft.Extensions.Options;
@@ -16,7 +15,6 @@ public class Alla : IAlla
 	public Alla(IOptions<AllaOptions> options)
 	{
 		ArgumentNullException.ThrowIfNull(options);
-
 		_options = options.Value;
 
 		EnsureCreated();
