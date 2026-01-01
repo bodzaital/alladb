@@ -2,10 +2,23 @@
 
 Something that can barely be called a document "database," written in C# and using JSON.
 
-Create a new DB using the constructor:
+Create a new DB using the options:
 
 ```c#
-Alla db = new("file.json");
+AllaOptions options = new AllaOptions().AddDataSource("fields.json");
+Alla db = new(options);
+```
+
+Or register and use it in dependency injection:
+
+```c#
+builder.Services.AddAllaDb((options) => options.AddDataSource("fields.json"));
+
+// Consumer:
+public class MyConsumerClass(IAlla db)
+{
+	// ...
+}
 ```
 
 Grab a reference to a collection (creates one if it does not exist):
