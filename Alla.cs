@@ -41,7 +41,13 @@ public class Alla : IAlla
 
 	public void Persist()
 	{
-		if (Collections.Any((x) => x.Transaction is not null)) throw new Exception();
+		if (_options.DataSource == ":memory:") throw new InvalidOperationException(
+			"Database cannot be persisted because it is in-memory only."
+		);
+
+		if (Collections.Any((x) => x.Transaction is not null)) throw new UnresolvedTransactionException(
+			"The transaction must be resolved before persisting the collection."
+		);
 		
 		File.WriteAllText(_options.DataSource, JsonSerializer.Serialize(Collections.Where((x) => x.Documents.Count > 0)));
 	}
