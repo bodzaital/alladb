@@ -21,6 +21,14 @@ public class Alla : IAlla
 		Collections = Load();
 	}
 
+	public Alla(AllaOptions options)
+	{
+		_options = options;
+
+		EnsureCreated();
+		Collections = Load();
+	}
+
 	public void DropDatabase() => Collections.Clear();
 
 	public void DropCollection(string collectionName) => Collections
