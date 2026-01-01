@@ -57,3 +57,16 @@ using (Transaction tx = collection.CreateTransaction())
 	tx.MarkForRollback();
 }
 ```
+
+You can also use transactions without using blocks by calling Dispose manually:
+
+```c#
+Transaction tx = collection.CreateTransaction();
+
+// ...
+
+tx.MarkForCommit();
+// or tx.MarkForRollback();
+
+tx.Dispose();
+```
