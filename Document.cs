@@ -23,6 +23,8 @@ public class Document(Dictionary<string, object?> fields)
 
 	public void SetField<T>(string key, T value)
 	{
+		Collection!.ThrowIfRequiredTransactionMissing();
+
 		if (Collection!.Transaction is null)
 		{
 			if (!Fields.TryAdd(key, value)) Fields[key] = value;
@@ -35,6 +37,8 @@ public class Document(Dictionary<string, object?> fields)
 
 	public void DeleteField(string key)
 	{
+		Collection!.ThrowIfRequiredTransactionMissing();
+		
 		if (Collection!.Transaction is null)
 		{
 			bool couldRemove = Fields.Remove(key);

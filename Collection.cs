@@ -5,8 +5,10 @@ using AllaDb.Exceptions;
 
 namespace AllaDb;
 
-public class Collection(string name)
+public class Collection(AllaOptions options, string name)
 {
+	private readonly AllaOptions _options = options;
+
 	[JsonInclude]
 	public string Name { get; set; } = name;
 
@@ -20,12 +22,16 @@ public class Collection(string name)
 
 	public void Truncate()
 	{
+		ThrowIfRequiredTransactionMissing();
+
 		if (Transaction is not null) Transaction.Deletions.AddRange(TxDocuments());
 		else Documents.Clear();
 	}
 
 	public void DeleteDocument(string documentId)
 	{
+		ThrowIfRequiredTransactionMissing();
+
 		Document document = TxDocuments().FirstOrDefault((x) => x.Id == documentId)
 			?? throw new ArgumentOutOfRangeException(nameof(documentId), documentId);
 
@@ -35,6 +41,8 @@ public class Collection(string name)
 
 	public Document CreateDocument(Dictionary<string, object?> fields)
 	{
+		ThrowIfRequiredTransactionMissing();
+		
 		Document document = new(fields) { Collection = this };
 		
 		if (Transaction is not null) Transaction.Additions.Add(document);
@@ -68,5 +76,14 @@ public class Collection(string name)
 		});
 
 		return new([..notDeletedDocuments, ..Transaction.Additions]);
+	}
+
+	internal void ThrowIfRequiredTransactionMissing()
+	{
+		if (!_options.AreTransactionsRequired || Transaction is not null) return;
+
+		throw new InvalidOperationException(
+			"Transactions are required."
+		);
 	}
 }

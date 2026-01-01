@@ -32,7 +32,7 @@ public class Alla : IAlla
 
 		if (collection is null)
 		{
-			collection = new(collectionName);
+			collection = new(_options, collectionName);
 			Collections.Add(collection);
 		}
 
