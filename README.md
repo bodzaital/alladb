@@ -24,6 +24,8 @@ public class MyConsumerClass(IAlla db)
 Available options:
 - AddDataSource(string dataSource): specify a relative path as the data source for persistance (otherwise it will be just an in-memory DB)
 - WithRequiredTransactions(): specify that all collection/document level modifying operations require a transaction (otherwise transactions are not required)
+- WithPrettyPrint(): specify that the serialized file is formatted (otherwise the file will not contain white space)
+- WithEnumStrings(): specify that the serialization should use strings for enums (otherwise ordinals will be used)
 
 Grab a reference to a collection (creates one if it does not exist):
 
