@@ -10,6 +10,8 @@ public class Alla : IAlla
 {
 	private readonly AllaOptions _options;
 
+	private readonly JsonSerializerOptions _serializerOptions;
+
 	[JsonInclude]
 	private readonly List<Collection> Collections = [];
 
@@ -18,6 +20,16 @@ public class Alla : IAlla
 		ArgumentNullException.ThrowIfNull(options);
 		_options = options.Value;
 
+		_serializerOptions = new()
+		{
+			WriteIndented = _options.IsPrettyPrint,
+		};
+
+		if (_options.IsEnumStrings)
+		{
+			_serializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+		}
+
 		EnsureCreated();
 		Collections = Load();
 	}
@@ -25,6 +37,16 @@ public class Alla : IAlla
 	public Alla(AllaOptions options)
 	{
 		_options = options;
+
+		_serializerOptions = new()
+		{
+			WriteIndented = _options.IsPrettyPrint,
+		};
+
+		if (_options.IsEnumStrings)
+		{
+			_serializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+		}
 
 		EnsureCreated();
 		Collections = Load();
@@ -60,7 +82,13 @@ public class Alla : IAlla
 			"The transaction must be resolved before persisting the collection."
 		);
 		
-		File.WriteAllText(_options.DataSource, JsonSerializer.Serialize(Collections.Where((x) => x.Documents.Count > 0)));
+		File.WriteAllText(
+			_options.DataSource,
+			JsonSerializer.Serialize(
+				Collections.Where((x) => x.Documents.Count > 0),
+				_serializerOptions
+			)
+		);
 	}
 
 	private List<Collection> Load() => JsonSerializer.Deserialize<List<Collection>>(File.ReadAllText(_options.DataSource))

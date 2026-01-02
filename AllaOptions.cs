@@ -6,6 +6,10 @@ public class AllaOptions
 
 	internal bool AreTransactionsRequired { get; set; } = false;
 
+	internal bool IsPrettyPrint { get; set; } = false;
+
+	internal bool IsEnumStrings { get; set; } = false;
+
 	public AllaOptions AddDataSource(string dataSource)
 	{
 		DataSource = dataSource;
@@ -15,6 +19,18 @@ public class AllaOptions
 	public AllaOptions WithRequiredTransactions()
 	{
 		AreTransactionsRequired = true;
+		return this;
+	}
+
+	public AllaOptions WithPrettyPrint()
+	{
+		IsPrettyPrint = true;
+		return this;
+	}
+
+	public AllaOptions WithEnumStrings()
+	{
+		IsEnumStrings = true;
 		return this;
 	}
 }
