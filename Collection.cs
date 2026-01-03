@@ -24,7 +24,7 @@ public class Collection(AllaOptions options, string name)
 	{
 		ThrowIfRequiredTransactionMissing();
 
-		if (Transaction is not null) Transaction.Deletions.AddRange(TxDocuments());
+		if (Transaction is not null) GetDocuments().ToList().ForEach(Transaction.AddDocumentDeletion);
 		else Documents.Clear();
 	}
 
@@ -32,10 +32,10 @@ public class Collection(AllaOptions options, string name)
 	{
 		ThrowIfRequiredTransactionMissing();
 
-		Document document = TxDocuments().FirstOrDefault((x) => x.Id == documentId)
+		Document document = GetDocuments().FirstOrDefault((x) => x.Id == documentId)
 			?? throw new ArgumentOutOfRangeException(nameof(documentId), documentId);
 
-		if (Transaction is not null) Transaction.Deletions.Add(document);
+		if (Transaction is not null) Transaction.AddDocumentDeletion(document);
 		else Documents.Remove(document);
 	}
 
@@ -45,13 +45,13 @@ public class Collection(AllaOptions options, string name)
 		
 		Document document = new(fields) { Collection = this };
 		
-		if (Transaction is not null) Transaction.Additions.Add(document);
+		if (Transaction is not null) Transaction.AddDocumentWrite(document);
 		else Documents.Add(document);
 		
 		return document;
 	}
 
-	public Document GetDocument(string documentId) => TxDocuments().FirstOrDefault((x) => x.Id == documentId)
+	public Document GetDocument(string documentId) => GetDocuments().FirstOrDefault((x) => x.Id == documentId)
 		?? throw new ArgumentOutOfRangeException(nameof(documentId), documentId);
 
 	public Transaction CreateTransaction()
@@ -64,18 +64,16 @@ public class Collection(AllaOptions options, string name)
 		return Transaction;
 	}
 
-	public ReadOnlyCollection<Document> GetDocuments() => new(TxDocuments());
-
-	internal ReadOnlyCollection<Document> TxDocuments()
+	public ReadOnlyCollection<Document> GetDocuments()
 	{
 		if (Transaction is null) return new(Documents);
 
 		IEnumerable<Document> notDeletedDocuments = Documents.Where((live) =>
 		{
-			return Transaction.Deletions.Find((inTx) => inTx.Id == live.Id) is null;
+			return Transaction.Documents(Transaction.ChangeAction.Deleted).Find((inTx) => inTx.Id == live.Id) is null;
 		});
 
-		return new([..notDeletedDocuments, ..Transaction.Additions]);
+		return new([..notDeletedDocuments, ..Transaction.Documents(Transaction.ChangeAction.Written)]);
 	}
 
 	internal void ThrowIfRequiredTransactionMissing()

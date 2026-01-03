@@ -13,12 +13,12 @@ public class Document(Dictionary<string, object?> fields)
 	[JsonInclude]
 	internal Dictionary<string, object?> Fields { get; set; } = fields;
 
-	public bool HasField(string key) => TxFields().ContainsKey(key);
+	public bool HasField(string key) => GetFields().ContainsKey(key);
 
 	public T? GetField<T>(string key)
 	{
 		if (!HasField(key)) throw new ArgumentOutOfRangeException(nameof(key), key);
-		return (T?)Convert.ChangeType(TxFields()[key], typeof(T));
+		return (T?)Convert.ChangeType(GetFields()[key], typeof(T));
 	}
 
 	public void SetField<T>(string key, T value)
@@ -31,8 +31,7 @@ public class Document(Dictionary<string, object?> fields)
 			return;
 		}
 
-		Transaction.FieldChange fieldChange = new(Id, key, value, Transaction.FieldChangeAction.Written);
-		Collection.Transaction.FieldChanges.Add(fieldChange);
+		Collection.Transaction.AddFieldWrite(Id, key, value);
 	}
 
 	public void DeleteField(string key)
@@ -46,8 +45,7 @@ public class Document(Dictionary<string, object?> fields)
 			return;
 		}
 
-		Transaction.FieldChange fieldChange = new(Id, key, null, Transaction.FieldChangeAction.Deleted);
-		Collection.Transaction.FieldChanges.Add(fieldChange);
+		Collection.Transaction.AddFieldDeletion(Id, key);
 	}
 
 	public bool TryGetField<T>(string key, out T? value)
@@ -61,20 +59,12 @@ public class Document(Dictionary<string, object?> fields)
 		return hasField;
 	}
 
-	public ReadOnlyDictionary<string, object?> GetFields() => TxFields();
-
-	private ReadOnlyDictionary<string, object?> TxFields()
+	private ReadOnlyDictionary<string, object?> GetFields()
 	{
 		if (Collection?.Transaction is null) return new(Fields);
 
-		IEnumerable<Transaction.FieldChange> fieldChanges = Collection.Transaction.FieldChanges
-			.Where((x) => x.DocumentId == Id);
-
-		IEnumerable<Transaction.FieldChange> fieldDeletions = fieldChanges
-			.Where((x) => x.Action == Transaction.FieldChangeAction.Deleted);
-
-		IEnumerable<Transaction.FieldChange> fieldWrites = fieldChanges
-			.Where((x) => x.Action == Transaction.FieldChangeAction.Written);
+		List<Transaction.FieldChange> fieldDeletions = Collection.Transaction.FieldChanges(Transaction.ChangeAction.Deleted);
+		List<Transaction.FieldChange> fieldWrites = Collection.Transaction.FieldChanges(Transaction.ChangeAction.Written);
 
 		IEnumerable<KeyValuePair<string, object?>> unchangedFields = Fields
 			.Where((field) => fieldDeletions.Any((deletion) => deletion.Key == field.Key))

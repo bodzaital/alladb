@@ -11,7 +11,7 @@ public class Transaction(Collection collection) : IDisposable
 		Rollback,
 	}
 
-	public enum FieldChangeAction
+	public enum ChangeAction
 	{
 		Written,
 		Deleted,
@@ -21,18 +21,21 @@ public class Transaction(Collection collection) : IDisposable
 		string DocumentId,
 		string Key,
 		object? Value,
-		FieldChangeAction Action
+		ChangeAction Action
 	);
+
+	public record DocumentChange(
+		Document Document,
+		ChangeAction Action
+	);
+
+	private readonly List<DocumentChange> _documentChanges = [];
+
+	private readonly List<FieldChange> _fieldChanges = [];
 
 	internal Collection Collection { get; set; } = collection;
 
 	internal ResolutionAction Resolution { get; set; } = ResolutionAction.Unresolved;
-
-	internal List<Document> Additions { get; set; } = [];
-
-	internal List<Document> Deletions { get; set; } = [];
-
-	internal List<FieldChange> FieldChanges { get; set; } = [];
 
 	public void Dispose()
 	{
@@ -44,14 +47,19 @@ public class Transaction(Collection collection) : IDisposable
 
 		if (Resolution == ResolutionAction.Commit)
 		{
-			Deletions.ForEach((x) => Collection.Documents.Remove(x));
-			Additions.ForEach(Collection.Documents.Add);
+			Documents(ChangeAction.Deleted).ForEach((x) => Collection.Documents.Remove(x));
+			Documents(ChangeAction.Written).ForEach(Collection.Documents.Add);
 
-			FieldChanges.ForEach((fieldChange) =>
+			FieldChanges(ChangeAction.Written).ForEach((fieldChange) =>
 			{
 				Document document = Collection.Documents.First((document) => document.Id == fieldChange.DocumentId);
-				if (fieldChange.Action == FieldChangeAction.Written) document.Fields[fieldChange.Key] = fieldChange.Value;
-				if (fieldChange.Action == FieldChangeAction.Deleted) document.Fields.Remove(fieldChange.Key);
+				document.Fields[fieldChange.Key] = fieldChange.Value;
+			});
+
+			FieldChanges(ChangeAction.Deleted).ForEach((fieldChange) =>
+			{
+				Document document = Collection.Documents.First((document) => document.Id == fieldChange.DocumentId);
+				document.Fields.Remove(fieldChange.Key);
 			});
 		}
 
@@ -61,4 +69,31 @@ public class Transaction(Collection collection) : IDisposable
 	public void MarkForCommit() => Resolution = ResolutionAction.Commit;
 
 	public void MarkForRollback() => Resolution = ResolutionAction.Rollback;
+
+	internal void AddDocumentDeletion(Document document) => _documentChanges.Add(new(document, ChangeAction.Deleted));
+
+	internal void AddDocumentWrite(Document document) => _documentChanges.Add(new(document, ChangeAction.Written));
+
+	internal List<Document> Documents(ChangeAction? action = null) => [.. _documentChanges
+		.Where((x) => x.Action == action)
+		.Select((x) => x.Document)
+	];
+
+	internal void AddFieldDeletion(string documentId, string key) => _fieldChanges.Add(new(
+		documentId,
+		key,
+		null,
+		ChangeAction.Deleted
+	));
+
+	internal void AddFieldWrite(string documentId, string key, object? value) => _fieldChanges.Add(new(
+		documentId,
+		key,
+		value,
+		ChangeAction.Written
+	));
+
+	internal List<FieldChange> FieldChanges(ChangeAction action) => [.. _fieldChanges
+		.Where((x) => x.Action == action)
+	];
 }
