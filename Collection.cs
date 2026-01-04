@@ -15,10 +15,19 @@ public class Collection(AllaOptions options, string name)
 	[JsonInclude]
 	internal List<Document> Documents { get; set; } = [];
 
+	[JsonInclude]
+	internal List<IConstraint> Constraints { get; set; } = [];
+
 	internal Transaction? Transaction { get; set; }
 
 	[OnDeserialized]
-	public void OnDeserialized() => Documents.ForEach((x) => x.Collection = this);
+	public void OnDeserialized()
+	{
+		Documents.ForEach((x) => x.Collection = this);
+		Constraints.ForEach((x) => x.SetCollection(this));
+	}
+
+	public void CreateConstraints(params List<IConstraint> constraints) => Constraints.AddRange(constraints);
 
 	public void Truncate()
 	{
@@ -42,6 +51,7 @@ public class Collection(AllaOptions options, string name)
 	public Document CreateDocument(Dictionary<string, object?> fields)
 	{
 		ThrowIfRequiredTransactionMissing();
+		Constraints.ForEach((x) => x.ValidateNewDocument(fields));
 		
 		Document document = new(fields) { Collection = this };
 		

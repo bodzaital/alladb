@@ -76,3 +76,26 @@ tx.MarkForCommit();
 
 tx.Dispose();
 ```
+
+Create constraints on a collection: 
+
+```c#
+collection.CreateConstraints(
+	new Constraint("key", Constraint.Type.Required)
+);
+```
+
+Available constraints:
+- Required: key must exist (on create and delete)
+- Unique: field must be unique among the collection (on create and update)
+- Default: field has a default value (on create)
+- From: field must have a value from a set (on create and update)
+
+Create custom constraints by implementing IConstraint and throwing an exception when constraints are violated:
+
+- `void SetCollection(Collection collection)` is called when deserializing the database and contains a reference to the associated collection
+- `void ValidateNewDocument(Dictionary<string, object?> fields)` is called when a document is created
+- `public void ValidateFieldWrite(string key, object? value)` is called when a field is written to
+- `void ValidateFieldDelete(string key)` is called when a field is deleted
+
+Mark fields and non-public properties with `[JsonInclude]`.

@@ -21,9 +21,10 @@ public class Document(Dictionary<string, object?> fields)
 		return (T?)Convert.ChangeType(GetFields()[key], typeof(T));
 	}
 
-	public void SetField<T>(string key, T value)
+	public void SetField(string key, object? value)
 	{
 		Collection!.ThrowIfRequiredTransactionMissing();
+		Collection!.Constraints.ForEach((x) => x.ValidateFieldWrite(key, value));
 
 		if (Collection!.Transaction is null)
 		{
@@ -37,6 +38,7 @@ public class Document(Dictionary<string, object?> fields)
 	public void DeleteField(string key)
 	{
 		Collection!.ThrowIfRequiredTransactionMissing();
+		Collection!.Constraints.ForEach((x) => x.ValidateFieldDelete(key));
 		
 		if (Collection!.Transaction is null)
 		{
