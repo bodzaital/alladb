@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using AllaDb.Exceptions;
 
 namespace AllaDb;
 
@@ -35,7 +36,9 @@ public sealed class Constraint(string key, Constraint.Type type, params List<obj
 	{
 		if (ConstraintType == Type.Required)
 		{
-			if (!fields.ContainsKey(Key)) throw new Exception();
+			if (!fields.ContainsKey(Key)) throw new ConstraintViolationException(
+				ConstraintViolationException.RequiredViolation(Key)
+			);
 		}
 
 		if (ConstraintType == Type.Unique)
@@ -45,7 +48,9 @@ public sealed class Constraint(string key, Constraint.Type type, params List<obj
 				.Select((x) => x.GetField<object?>(Key))
 				.Contains(fields[Key]);
 			
-			if (exists) throw new Exception();
+			if (exists) throw new ConstraintViolationException(
+				ConstraintViolationException.UniqueViolation(Key)
+			);
 		}
 
 		if (ConstraintType == Type.Default)
@@ -57,7 +62,9 @@ public sealed class Constraint(string key, Constraint.Type type, params List<obj
 		{
 			bool isFromList = Values.Contains(fields[Key]);
 
-			if (!isFromList) throw new Exception();
+			if (!isFromList) throw new ConstraintViolationException(
+				ConstraintViolationException.OutOfRangeViolation(Key)
+			);
 		}
 	}
 
@@ -72,14 +79,18 @@ public sealed class Constraint(string key, Constraint.Type type, params List<obj
 				.Select((x) => x.GetField<object?>(Key))
 				.Contains(value);
 			
-			if (exists) throw new Exception();
+			if (exists) throw new ConstraintViolationException(
+				ConstraintViolationException.UniqueViolation(Key)
+			);
 		}
 
 		if (ConstraintType == Type.From)
 		{
 			bool isFromList = Values.Contains(value);
 
-			if (!isFromList) throw new Exception();
+			if (!isFromList) throw new ConstraintViolationException(
+				ConstraintViolationException.OutOfRangeViolation(Key)
+			);
 		}
 	}
 
@@ -87,10 +98,9 @@ public sealed class Constraint(string key, Constraint.Type type, params List<obj
 	{
 		if (key != Key) return;
 
-		if (ConstraintType == Type.Required)
-		{
-			throw new Exception();
-		}
+		if (ConstraintType == Type.Required) throw new ConstraintViolationException(
+			ConstraintViolationException.RequiredViolation(Key)
+		);
 	}
 
 	public void SetCollection(Collection collection) => _collection = collection;
