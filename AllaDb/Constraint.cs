@@ -37,7 +37,7 @@ public sealed class Constraint(string key, Constraint.Type type, params List<obj
 		if (ConstraintType == Type.Required)
 		{
 			if (!fields.ContainsKey(Key)) throw new ConstraintViolationException(
-				ConstraintViolationException.RequiredViolation(Key)
+				ConstraintViolationException.RequiredMissingViolation(Key)
 			);
 		}
 
@@ -49,7 +49,7 @@ public sealed class Constraint(string key, Constraint.Type type, params List<obj
 				.Contains(fields[Key]);
 			
 			if (exists) throw new ConstraintViolationException(
-				ConstraintViolationException.UniqueViolation(Key)
+				ConstraintViolationException.NonUniqueViolation(Key)
 			);
 		}
 
@@ -80,7 +80,7 @@ public sealed class Constraint(string key, Constraint.Type type, params List<obj
 				.Contains(value);
 			
 			if (exists) throw new ConstraintViolationException(
-				ConstraintViolationException.UniqueViolation(Key)
+				ConstraintViolationException.NonUniqueViolation(Key)
 			);
 		}
 
@@ -99,7 +99,7 @@ public sealed class Constraint(string key, Constraint.Type type, params List<obj
 		if (key != Key) return;
 
 		if (ConstraintType == Type.Required) throw new ConstraintViolationException(
-			ConstraintViolationException.RequiredViolation(Key)
+			ConstraintViolationException.RequiredMissingViolation(Key)
 		);
 	}
 
