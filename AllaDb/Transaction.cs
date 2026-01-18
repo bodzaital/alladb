@@ -2,6 +2,7 @@ using AllaDb.Exceptions;
 
 namespace AllaDb;
 
+/// <summary>Represents a transaction.</summary>
 public class Transaction(Collection collection) : IDisposable
 {
 	internal enum ResolutionAction
@@ -37,6 +38,7 @@ public class Transaction(Collection collection) : IDisposable
 
 	internal ResolutionAction Resolution { get; set; } = ResolutionAction.Unresolved;
 
+	/// <summary>Finalize and complete the <see cref="Transaction"/>. If the <see cref="Transaction"/> was neither marked for commit nor rollback, throws an <see cref="UnresolvedTransactionException"/>.</summary>
 	public void Dispose()
 	{
 		GC.SuppressFinalize(this);
@@ -63,11 +65,13 @@ public class Transaction(Collection collection) : IDisposable
 			});
 		}
 
-		Collection.Transaction = null;
+		Collection.OpenTransaction = null;
 	}
 
+	/// <summary>Marks the <see cref="Transaction"/> to commit (apply) all changes.</summary>
 	public void MarkForCommit() => Resolution = ResolutionAction.Commit;
 
+	/// <summary>Marks the <see cref="Transaction"/> to roll back (abort) the changes.</summary>
 	public void MarkForRollback() => Resolution = ResolutionAction.Rollback;
 
 	internal void AddDocumentDeletion(Document document) => _documentChanges.Add(new(document, ChangeAction.Deleted));
