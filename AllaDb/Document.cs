@@ -90,8 +90,8 @@ public class Document(Dictionary<string, object?> fields)
 		List<Transaction.FieldChange> fieldWrites = Collection.OpenTransaction.FieldChanges(Transaction.ChangeAction.Written);
 
 		IEnumerable<KeyValuePair<string, object?>> unchangedFields = Fields
-			.Where((field) => fieldDeletions.Any((deletion) => deletion.Key == field.Key))
-			.Where((field) => fieldWrites.Any((write) => write.Key == field.Key));
+			.Where((field) => !fieldWrites.Any((write) => write.Key == field.Key))
+			.Where((field) => !fieldDeletions.Any((deletion) => deletion.Key == field.Key));
 		
 		IEnumerable<KeyValuePair<string, object?>> writtenFields = fieldWrites
 			.Select((write) => new KeyValuePair<string, object?>(write.Key, write.Value));
