@@ -4,27 +4,27 @@ namespace AllaDb;
 
 public class Transaction(Collection collection) : IDisposable
 {
-	public enum ResolutionAction
+	internal enum ResolutionAction
 	{
 		Unresolved,
 		Commit,
 		Rollback,
 	}
 
-	public enum ChangeAction
+	internal enum ChangeAction
 	{
 		Written,
 		Deleted,
 	}
 
-	public record FieldChange(
+	internal record FieldChange(
 		string DocumentId,
 		string Key,
 		object? Value,
 		ChangeAction Action
 	);
 
-	public record DocumentChange(
+	internal record DocumentChange(
 		Document Document,
 		ChangeAction Action
 	);
