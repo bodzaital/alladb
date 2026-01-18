@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using NSubstitute;
 
-namespace AllaDb.Test.DocumentTests;
+namespace AllaDb.Test;
 
 [TestFixture]
 public class DocumentTest
