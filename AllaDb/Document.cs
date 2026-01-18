@@ -86,8 +86,8 @@ public class Document(Dictionary<string, object?> fields)
 	{
 		if (Collection?.OpenTransaction is null) return new(Fields);
 
-		List<Transaction.FieldChange> fieldDeletions = Collection.OpenTransaction.FieldChanges(Transaction.ChangeAction.Deleted);
-		List<Transaction.FieldChange> fieldWrites = Collection.OpenTransaction.FieldChanges(Transaction.ChangeAction.Written);
+		List<Transaction.FieldChange> fieldDeletions = Collection.OpenTransaction.GetFieldChanges(Transaction.ChangeAction.Deleted);
+		List<Transaction.FieldChange> fieldWrites = Collection.OpenTransaction.GetFieldChanges(Transaction.ChangeAction.Written);
 
 		IEnumerable<KeyValuePair<string, object?>> unchangedFields = Fields
 			.Where((field) => !fieldWrites.Any((write) => write.Key == field.Key))

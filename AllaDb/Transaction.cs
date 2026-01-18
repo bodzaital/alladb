@@ -30,9 +30,9 @@ public class Transaction(Collection collection) : IDisposable
 		ChangeAction Action
 	);
 
-	private readonly List<DocumentChange> _documentChanges = [];
+	internal readonly List<DocumentChange> DocumentChanges = [];
 
-	private readonly List<FieldChange> _fieldChanges = [];
+	internal readonly List<FieldChange> FieldChanges = [];
 
 	internal Collection Collection { get; set; } = collection;
 
@@ -52,13 +52,13 @@ public class Transaction(Collection collection) : IDisposable
 			Documents(ChangeAction.Deleted).ForEach((x) => Collection.Documents.Remove(x));
 			Documents(ChangeAction.Written).ForEach(Collection.Documents.Add);
 
-			FieldChanges(ChangeAction.Written).ForEach((fieldChange) =>
+			GetFieldChanges(ChangeAction.Written).ForEach((fieldChange) =>
 			{
 				Document document = Collection.Documents.First((document) => document.Id == fieldChange.DocumentId);
 				document.Fields[fieldChange.Key] = fieldChange.Value;
 			});
 
-			FieldChanges(ChangeAction.Deleted).ForEach((fieldChange) =>
+			GetFieldChanges(ChangeAction.Deleted).ForEach((fieldChange) =>
 			{
 				Document document = Collection.Documents.First((document) => document.Id == fieldChange.DocumentId);
 				document.Fields.Remove(fieldChange.Key);
@@ -74,30 +74,30 @@ public class Transaction(Collection collection) : IDisposable
 	/// <summary>Marks the <see cref="Transaction"/> to roll back (abort) the changes.</summary>
 	public void MarkForRollback() => Resolution = ResolutionAction.Rollback;
 
-	internal void AddDocumentDeletion(Document document) => _documentChanges.Add(new(document, ChangeAction.Deleted));
+	internal void AddDocumentDeletion(Document document) => DocumentChanges.Add(new(document, ChangeAction.Deleted));
 
-	internal void AddDocumentWrite(Document document) => _documentChanges.Add(new(document, ChangeAction.Written));
+	internal void AddDocumentWrite(Document document) => DocumentChanges.Add(new(document, ChangeAction.Written));
 
-	internal List<Document> Documents(ChangeAction? action = null) => [.. _documentChanges
+	internal List<Document> Documents(ChangeAction? action = null) => [.. DocumentChanges
 		.Where((x) => x.Action == action)
 		.Select((x) => x.Document)
 	];
 
-	internal void AddFieldDeletion(string documentId, string key) => _fieldChanges.Add(new(
+	internal void AddFieldDeletion(string documentId, string key) => FieldChanges.Add(new(
 		documentId,
 		key,
 		null,
 		ChangeAction.Deleted
 	));
 
-	internal void AddFieldWrite(string documentId, string key, object? value) => _fieldChanges.Add(new(
+	internal void AddFieldWrite(string documentId, string key, object? value) => FieldChanges.Add(new(
 		documentId,
 		key,
 		value,
 		ChangeAction.Written
 	));
 
-	internal List<FieldChange> FieldChanges(ChangeAction action) => [.. _fieldChanges
+	internal List<FieldChange> GetFieldChanges(ChangeAction action) => [.. FieldChanges
 		.Where((x) => x.Action == action)
 	];
 }
