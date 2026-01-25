@@ -27,12 +27,26 @@ public class Collection(AllaOptions options, string name)
 	public void OnDeserialized()
 	{
 		Documents.ForEach((x) => x.Collection = this);
-		Constraints.ForEach((x) => x.SetCollection(this));
+		SetCollectionToConstraints();
 	}
 
 	/// <summary>Assigns a range of <see cref="IConstraint"/>s to the <see cref="Collection"/>.</summary>
 	/// <param name="constraints">The range of <see cref="IConstraint"/>s whose elements should be assigned to the <see cref="Collection"/>.</param>
-	public void CreateConstraints(params IEnumerable<IConstraint> constraints) => Constraints.AddRange(constraints);
+	/// <returns>The created constraints.</returns>
+	public List<IConstraint> CreateConstraints(params IEnumerable<IConstraint> constraints)
+	{
+		Constraints.AddRange(constraints);
+		SetCollectionToConstraints();
+		return Constraints;
+	}
+
+	public void DeleteConstraint(string constraintId)
+	{
+		IConstraint constraint = Constraints.FirstOrDefault((x) => x.Id == constraintId)
+			?? throw new ArgumentOutOfRangeException(nameof(constraintId), constraintId);
+
+		Constraints.Remove(constraint);
+	}
 
 	/// <summary>Removes all <see cref="Document"/>s from the <see cref="Collection"/>.</summary>
 	public void Truncate()
@@ -112,4 +126,8 @@ public class Collection(AllaOptions options, string name)
 			"Transactions are required."
 		);
 	}
+
+	private void SetCollectionToConstraints() => Constraints
+		.Select((x) => (ConstraintBase)x).ToList()
+		.ForEach((x) => x.Collection = this);
 }

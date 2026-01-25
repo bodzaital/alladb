@@ -3,13 +3,30 @@ using AllaDb.Exceptions;
 
 namespace AllaDb;
 
-/// <summary>Represents a validation constraint.</summary>
-public interface IConstraint
+/// <summary>Represents abstract properties that all <see cref="IConstraint"/> implementations should have.</summary>
+public interface IConstraintBase
 {
-	/// <summary>Method that is called when deserializing the database to set the associated <see cref="Collection"/> reference.</summary>
-	/// <param name="collection">The <see cref="Collection"/> this <see cref="IConstraint"/> belongs to.</param>
-	void SetCollection(Collection collection);
+	/// <summary>Gets the unique identifier of this <see cref="IConstraint"/> implementation.</summary>
+	string Id { get; }
 
+	/// <summary>Contains a reference to the <see cref="Collection"/> this <see cref="IConstraint"/> implementation belongs to.</summary>
+	Collection? Collection { get; }
+}
+
+/// <inheritdoc cref="IConstraintBase" />
+public abstract class ConstraintBase : IConstraintBase
+{
+	/// <inheritdoc cref="IConstraintBase.Id" />
+	public string Id { get; } = Guid.NewGuid().ToString();
+
+	/// <inheritdoc cref="IConstraintBase.Collection" />
+	[JsonIgnore]
+	public Collection? Collection { get; internal set; }
+}
+
+/// <summary>Represents a validation constraint.</summary>
+public interface IConstraint : IConstraintBase
+{
 	/// <summary>Method called when validating a new <see cref="Document"/> before it is inserted into the <see cref="Collection"/>. If a constraint is violated, throws a <see cref="ConstraintViolationException"/> with an appropriate message.</summary>
 	/// <param name="fields">Fields of the new <see cref="Document"/>.</param>
 	void ValidateNewDocument(Dictionary<string, object?> fields);
@@ -25,7 +42,7 @@ public interface IConstraint
 }
 
 /// <inheritdoc cref="IConstraint" />
-public sealed class Constraint(string key, Constraint.Type type, params List<object?> constraintValues) : IConstraint
+public sealed class Constraint(string key, Constraint.Type type, params List<object?> constraintValues) : ConstraintBase
 {
 	/// <summary>Built-in constraints.</summary>
 	public enum Type
@@ -42,8 +59,6 @@ public sealed class Constraint(string key, Constraint.Type type, params List<obj
 		/// <summary>Specifies that the value of the associated field must be one of the specified set.</summary>
 		From,
 	}
-
-	private Collection? _collection;
 	
 	[JsonInclude]
 	internal string Key { get; set; } = key;
@@ -66,7 +81,7 @@ public sealed class Constraint(string key, Constraint.Type type, params List<obj
 
 		if (ConstraintType == Type.Unique)
 		{
-			bool exists = _collection!.Documents
+			bool exists = Collection!.Documents
 				.Where((x) => x.HasField(Key))
 				.Select((x) => x.GetField<object?>(Key))
 				.Contains(fields[Key]);
@@ -98,7 +113,7 @@ public sealed class Constraint(string key, Constraint.Type type, params List<obj
 
 		if (ConstraintType == Type.Unique)
 		{
-			bool exists = _collection!.Documents
+			bool exists = Collection!.Documents
 				.Where((x) => x.HasField(Key))
 				.Select((x) => x.GetField<object?>(Key))
 				.Contains(value);
@@ -127,7 +142,4 @@ public sealed class Constraint(string key, Constraint.Type type, params List<obj
 			ConstraintViolationException.RequiredMissingViolation(Key)
 		);
 	}
-
-	/// <inheritdoc cref="IConstraint.SetCollection(Collection)" />
-	public void SetCollection(Collection collection) => _collection = collection;
 }
