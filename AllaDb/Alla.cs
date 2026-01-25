@@ -6,6 +6,28 @@ using Microsoft.Extensions.Options;
 
 namespace AllaDb;
 
+public interface IAlla
+{
+	/// <summary>Removes all <see cref="Collection"/>s from the database.</summary>
+	void DropDatabase();
+
+	/// <summary>Removes a <see cref="Collection"/> from the database.</summary>
+	/// <param name="collectionName">Name of the <see cref="Collection"/> to remove.</param>
+	void DropCollection(string collectionName);
+
+	/// <summary>Gets or creates a reference to a <see cref="Collection"/>.</summary>
+	/// <param name="collectionName">Name of the <see cref="Collection"/> to get.</param>
+	/// <returns>The associated <see cref="Collection"/>.</returns>
+	Collection GetCollection(string collectionName);
+	
+	/// <summary>Returns a <see cref="ReadOnlyCollection{Collection}"/> of the <see cref="Collection"/>s of the database.</summary>
+	/// <returns>A <see cref="ReadOnlyCollection{Collection}"/> that can be used to iterate over the <see cref="Collection"/>s of the database.</returns>
+	ReadOnlyCollection<Collection> GetCollections();
+
+	/// <summary>Serializes the database to the data source file. If the database is in-memory only, throws <see cref="InvalidOperationException"/>. If a <see cref="Collection"/> has an open <see cref="Transaction"/>, throws <see cref="UnresolvedTransactionException"/>.</summary>
+	void Persist();
+}
+
 public class Alla : IAlla
 {
 	private readonly AllaOptions _options;
@@ -56,17 +78,14 @@ public class Alla : IAlla
 		Collections = Load();
 	}
 
-	/// <summary>Removes all <see cref="Collection"/>s from the database.</summary>
+	/// <inheritdoc cref="IAlla.DropDatabase">
 	public void DropDatabase() => Collections.Clear();
 
-	/// <summary>Removes a <see cref="Collection"/> from the database.</summary>
-	/// <param name="collectionName">Name of the <see cref="Collection"/> to remove.</param>
+	/// <inheritdoc cref="IAlla.DropCollection(string)"/>
 	public void DropCollection(string collectionName) => Collections
 		.RemoveAll((x) => x.Name == collectionName);
 
-	/// <summary>Gets or creates a reference to a <see cref="Collection"/>.</summary>
-	/// <param name="collectionName">Name of the <see cref="Collection"/> to get.</param>
-	/// <returns>The associated <see cref="Collection"/>.</returns>
+	/// <inheritdoc cref="IAlla.GetCollection(string)"/>
 	public Collection GetCollection(string collectionName)
 	{
 		Collection? collection = Collections.Find((x) => x.Name == collectionName);
@@ -80,11 +99,10 @@ public class Alla : IAlla
 		return collection;
 	}
 
-	/// <summary>Returns a <see cref="ReadOnlyCollection{Collection}"/> of the <see cref="Collection"/>s of the database.</summary>
-	/// <returns>A <see cref="ReadOnlyCollection{Collection}"/> that can be used to iterate over the <see cref="Collection"/>s of the database.</returns>
+	/// <inheritdoc cref="IAlla.GetCollections"/>
 	public ReadOnlyCollection<Collection> GetCollections() => new(Collections);
 
-	/// <summary>Serializes the database to the data source file. If the database is in-memory only, throws <see cref="InvalidOperationException"/>. If a <see cref="Collection"/> has an open <see cref="Transaction"/>, throws <see cref="UnresolvedTransactionException"/>.</summary>
+	/// <inheritdoc cref="IAlla.Persist"/>
 	public void Persist()
 	{
 		if (_options.DataSource == ":memory:") throw new InvalidOperationException(
