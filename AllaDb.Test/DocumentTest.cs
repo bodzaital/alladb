@@ -17,11 +17,9 @@ public class DocumentTest
 			Collection = new Collection(new(), "name"),
 		};
 
-		ReadOnlyDictionary<string, object?> result = document.GetFields();
-
-		Assert.That(result, Is.Not.Empty);
-		Assert.That(result, Has.Count.EqualTo(1));
-		AssertHasKeyValue(result, "key", "value");
+		Assert.That(document.Fields, Is.Not.Empty);
+		Assert.That(document.Fields, Has.Count.EqualTo(1));
+		AssertHasKeyValue(new KeyValueTest(document.Fields, "key", "value"));
 	}
 
 	[Test]
@@ -66,7 +64,7 @@ public class DocumentTest
 
 		Assert.That(result, Is.Not.Empty);
 		Assert.That(result, Has.Count.EqualTo(3));
-		AssertHasKeysValues(
+		AssertHasKeyValue(
 			new(result, "keyToKeep", "valueToKeep"),
 			new(result, "keyToUpdate", "updatedValue"),
 			new(result, "keyToAdd", "valueToAdd")
@@ -227,7 +225,7 @@ public class DocumentTest
 		document.SetField("key", "newValue");
 
 		Assert.That(document.Fields, Has.Count.EqualTo(1));
-		AssertHasKeyValue(document.Fields, "key", "newValue");
+		AssertHasKeyValue(new KeyValueTest(document.Fields, "key", "newValue"));
 
 		constraintMock.Received().ValidateFieldWrite("key", "newValue");
 	}
@@ -250,8 +248,10 @@ public class DocumentTest
 		document.SetField("key2", "value2");
 
 		Assert.That(document.Fields, Has.Count.EqualTo(2));
-		AssertHasKeyValue(document.Fields, "key", "value");
-		AssertHasKeyValue(document.Fields, "key2", "value2");
+		AssertHasKeyValue(
+			new(document.Fields, "key", "value"),
+			new(document.Fields, "key2", "value2")
+		);
 
 		constraintMock.Received().ValidateFieldWrite("key2", "value2");
 	}
@@ -278,7 +278,7 @@ public class DocumentTest
 		document.SetField("key2", "value2");
 
 		Assert.That(document.Fields, Has.Count.EqualTo(1));
-		AssertHasKeyValue(document.Fields, "key", "value");
+		AssertHasKeyValue(new KeyValueTest(document.Fields, "key", "value"));
 
 		Assert.That(transaction.FieldChanges, Has.Count.EqualTo(2));
 		
@@ -367,7 +367,7 @@ public class DocumentTest
 		document.DeleteField("key2");
 
 		Assert.That(document.Fields, Has.Count.EqualTo(1));
-		AssertHasKeyValue(document.Fields, "key", "value");
+		AssertHasKeyValue(new KeyValueTest(document.Fields, "key", "value"));
 		Assert.That(document.Fields, Does.Not.ContainKey("key2"));
 
 		constraintMock.Received().ValidateFieldDelete("key2");
@@ -395,8 +395,10 @@ public class DocumentTest
 		document.DeleteField("key2");
 
 		Assert.That(document.Fields, Has.Count.EqualTo(2));
-		AssertHasKeyValue(document.Fields, "key", "value");
-		AssertHasKeyValue(document.Fields, "key2", "value2");
+		AssertHasKeyValue(
+			new(document.Fields, "key", "value"),
+			new(document.Fields, "key2", "value2")
+		);
 		
 		Assert.That(transaction.FieldChanges, Has.Count.EqualTo(1));
 		
@@ -408,20 +410,14 @@ public class DocumentTest
 		constraintMock.Received().ValidateFieldDelete("key2");
 	}
 
-	private static void AssertHasKeyValue(IDictionary<string, object?> result, string key, object? value)
-	{
-		Assert.That(result, Contains.Key(key));
-		Assert.That(result[key], Is.EqualTo(value));
-	}
-
-	private static void AssertHasKeysValues(params List<KeyValueTest> tests)
+	private static void AssertHasKeyValue(params List<KeyValueTest> tests) => Assert.Multiple(() =>
 	{
 		tests.ForEach((test) =>
 		{
 			Assert.That(test.Result, Contains.Key(test.Key));
 			Assert.That(test.Result[test.Key], Is.EqualTo(test.Value));
 		});
-	}
+	});
 }
 
 public record KeyValueTest(IDictionary<string, object?> Result, string Key, object? Value);
