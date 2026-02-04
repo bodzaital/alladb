@@ -16,9 +16,6 @@ public class Collection(AllaOptions options, string name)
 	[JsonInclude]
 	internal List<Document> Documents { get; set; } = [];
 
-	[JsonInclude]
-	internal List<IConstraint> Constraints { get; set; } = [];
-
 	internal Transaction? OpenTransaction { get; set; }
 
 	/// <summary>Method that is called when deserializing the database to set the associated <see cref="Collection"/> references in <see cref="Document"/>s and <see cref="Constraint"/>s.</summary>
@@ -26,7 +23,6 @@ public class Collection(AllaOptions options, string name)
 	public void OnDeserialized()
 	{
 		Documents.ForEach((x) => x.Collection = this);
-		SetCollectionToConstraints();
 	}
 
 	#region Collections
@@ -42,33 +38,6 @@ public class Collection(AllaOptions options, string name)
 
 	#endregion
 
-	#region Constraints
-
-	/// <summary>Assigns a range of <see cref="IConstraint"/>s to the <see cref="Collection"/>.</summary>
-	/// <param name="constraints">The range of <see cref="IConstraint"/>s whose elements should be assigned to the <see cref="Collection"/>.</param>
-	/// <returns>The created constraints.</returns>
-	public void CreateConstraints(params IEnumerable<IConstraint> constraints)
-	{
-		Constraints.AddRange(constraints);
-		SetCollectionToConstraints();
-	}
-
-	/// <summary>Deletes the <see cref="IConstraint"/> with the specified Id from the <see cref="Collection"/>. If the specified <see cref="IConstraint"/> is not found, throws an <see cref="ArgumentOutOfRangeException"/>.</summary>
-	/// <param name="constraintId">The Id of the <see cref="IConstraint"/> to delete.</param>
-	public void DeleteConstraint(string constraintId)
-	{
-		IConstraint constraint = Constraints.FirstOrDefault((x) => x.Id == constraintId)
-			?? throw new ArgumentOutOfRangeException(nameof(constraintId), constraintId);
-
-		Constraints.Remove(constraint);
-	}
-
-	/// <summary>Returns a <see cref="ReadOnlyCollection{IConstraint}"/> of the <see cref="IConstraint"/>s of the <see cref="Collection"/>.</summary>
-	/// <returns>A <see cref="ReadOnlyCollection{IConstraint}"/> that can be used to iterate over the <see cref="IConstraint"/>s of the <see cref="Collection"/>.</returns>
-	public ReadOnlyCollection<IConstraint> GetConstraints() => new(Constraints);
-
-	#endregion
-
 	#region Documents
 
 	/// <summary>Adds a <see cref="Document"/> to the <see cref="Collection"/>.</summary>
@@ -77,7 +46,6 @@ public class Collection(AllaOptions options, string name)
 	public Document CreateDocument(Dictionary<string, object?> fields)
 	{
 		ThrowIfRequiredTransactionMissing();
-		Constraints.ForEach((x) => x.ValidateNewDocument(fields));
 		
 		Document document = new(fields) { Collection = this };
 		
@@ -146,8 +114,4 @@ public class Collection(AllaOptions options, string name)
 			"Transactions are required."
 		);
 	}
-
-	private void SetCollectionToConstraints() => Constraints
-		.Select((x) => (ConstraintBase)x).ToList()
-		.ForEach((x) => x.Collection = this);
 }

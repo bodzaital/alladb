@@ -36,7 +36,6 @@ public class Document(Dictionary<string, object?> fields)
 	public void SetField(string key, object? value)
 	{
 		Collection!.ThrowIfRequiredTransactionMissing();
-		Collection!.Constraints.ForEach((x) => x.ValidateFieldWrite(key, value));
 
 		if (Collection!.OpenTransaction is null)
 		{
@@ -52,7 +51,6 @@ public class Document(Dictionary<string, object?> fields)
 	public void DeleteField(string key)
 	{
 		Collection!.ThrowIfRequiredTransactionMissing();
-		Collection!.Constraints.ForEach((x) => x.ValidateFieldDelete(key));
 		
 		if (Collection!.OpenTransaction is null)
 		{
