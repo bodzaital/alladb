@@ -1,16 +1,8 @@
-﻿using System.Text.Json;
-using AllaDb;
+﻿using AllaDb;
 
-Alla db = new(new("database.json")
-{
-	EnumStrings = true,
-	PrettyPrint = true,
-	PartitionOptions = new()
-	{
-		Strategy = PartitionStrategy.ByCollection,
-		MaxSize = 1,
-	},
-});
+string connectionString = "Data Source = database.json, Enum Strings = true, Pretty Print = true, Partition Options: Strategy = ByCollection, Partition Options: Max Size = 1";
+
+Alla db = new(AllaOptions.FromConnectionString(connectionString));
 
 Collection coll1 = db.GetCollection("coll1");
 coll1.Add(new(){
