@@ -1,103 +1,92 @@
-using AllaDb.Exceptions;
+#pragma warning disable CA1816
 
 namespace AllaDb;
 
-/// <summary>Represents a transaction.</summary>
 public class Transaction(Collection collection) : IDisposable
 {
-	internal enum ResolutionAction
+	public enum Resolution
 	{
-		Unresolved,
-		Commit,
-		Rollback,
+		Committed,
+		RolledBack,
 	}
 
-	internal enum ChangeAction
+	public enum Action
 	{
-		Written,
-		Deleted,
+		Write,
+		Delete,
 	}
 
-	internal record FieldChange(
-		string DocumentId,
+	public record FieldChange(
+		string Id,
 		string Key,
-		object? Value,
-		ChangeAction Action
+		object? Value
 	);
 
-	internal record DocumentChange(
-		Document Document,
-		ChangeAction Action
+	public record Change(
+		Action Action,
+		FieldChange? FieldChange = null,
+		Document? DocumentChange = null
 	);
 
-	internal readonly List<DocumentChange> DocumentChanges = [];
+	public Resolution Result = Resolution.Committed;
 
-	internal readonly List<FieldChange> FieldChanges = [];
+	public List<Change> Changes { get; set; } = [];
 
-	internal Collection Collection { get; set; } = collection;
-
-	internal ResolutionAction Resolution { get; set; } = ResolutionAction.Unresolved;
-
-	/// <summary>Finalize and complete the <see cref="Transaction"/>. If the <see cref="Transaction"/> was neither marked for commit nor rollback, throws an <see cref="UnresolvedTransactionException"/>.</summary>
 	public void Dispose()
 	{
-		GC.SuppressFinalize(this);
-
-		if (Resolution == ResolutionAction.Unresolved) throw new UnresolvedTransactionException(
-			"The transaction must be resolved before it is disposed."
-		);
-
-		if (Resolution == ResolutionAction.Commit)
+		if (Result == Resolution.Committed)
 		{
-			Documents(ChangeAction.Deleted).ForEach((x) => Collection.Documents.Remove(x));
-			Documents(ChangeAction.Written).ForEach(Collection.Documents.Add);
-
-			GetFieldChanges(ChangeAction.Written).ForEach((fieldChange) =>
-			{
-				Document document = Collection.Documents.First((document) => document.Id == fieldChange.DocumentId);
-				document.Fields[fieldChange.Key] = fieldChange.Value;
-			});
-
-			GetFieldChanges(ChangeAction.Deleted).ForEach((fieldChange) =>
-			{
-				Document document = Collection.Documents.First((document) => document.Id == fieldChange.DocumentId);
-				document.Fields.Remove(fieldChange.Key);
-			});
+			Changes.ForEach(CommitChange);
 		}
 
-		Collection.OpenTransaction = null;
+		collection.Transactions.Remove(this);
 	}
 
-	/// <summary>Marks the <see cref="Transaction"/> to commit (apply) all changes.</summary>
-	public void MarkForCommit() => Resolution = ResolutionAction.Commit;
+	public void Commit()
+	{
+		Result = Resolution.Committed;
+	}
 
-	/// <summary>Marks the <see cref="Transaction"/> to roll back (abort) the changes.</summary>
-	public void MarkForRollback() => Resolution = ResolutionAction.Rollback;
+	public void Rollback()
+	{
+		Result = Resolution.RolledBack;
+	}
 
-	internal void AddDocumentDeletion(Document document) => DocumentChanges.Add(new(document, ChangeAction.Deleted));
+	private void CommitChange(Change change)
+	{
+		CommitFieldChange(change.Action, change.FieldChange);
+		CommitDocumentChange(change.Action, change.DocumentChange);
+	}
 
-	internal void AddDocumentWrite(Document document) => DocumentChanges.Add(new(document, ChangeAction.Written));
+	private void CommitFieldChange(Action action, FieldChange? fieldChange)
+	{
+		if (fieldChange is null) return;
 
-	internal List<Document> Documents(ChangeAction? action = null) => [.. DocumentChanges
-		.Where((x) => x.Action == action)
-		.Select((x) => x.Document)
-	];
+		Document document = collection.Documents.First((x) => x.Id == fieldChange.Id);
 
-	internal void AddFieldDeletion(string documentId, string key) => FieldChanges.Add(new(
-		documentId,
-		key,
-		null,
-		ChangeAction.Deleted
-	));
+		if (action == Action.Write)
+		{
+			document.Fields[fieldChange.Key] = fieldChange.Value;
+		}
 
-	internal void AddFieldWrite(string documentId, string key, object? value) => FieldChanges.Add(new(
-		documentId,
-		key,
-		value,
-		ChangeAction.Written
-	));
+		if (action == Action.Delete)
+		{
+			document.Fields.Remove(fieldChange.Key);
+		}
+	}
 
-	internal List<FieldChange> GetFieldChanges(ChangeAction action) => [.. FieldChanges
-		.Where((x) => x.Action == action)
-	];
+	private void CommitDocumentChange(Action action, Document? document)
+	{
+		if (document is null) return;
+
+		if (action == Action.Write)
+		{
+			collection.Documents.Add(document);
+		}
+
+		if (action == Action.Delete)
+		{
+			collection.Documents.Remove(document);
+		}
+	}
 }

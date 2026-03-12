@@ -1,133 +1,176 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using AllaDb.Exceptions;
-using Microsoft.Extensions.Options;
 
 namespace AllaDb;
 
-public interface IAlla
+public class Alla
 {
-	/// <summary>Removes all <see cref="Collection"/>s from the database.</summary>
-	void DropDatabase();
+	[JsonIgnore]
+	public AllaOptions Options { get; set; }
 
-	/// <summary>Removes a <see cref="Collection"/> from the database.</summary>
-	/// <param name="collectionName">Name of the <see cref="Collection"/> to remove.</param>
-	void DropCollection(string collectionName);
+	[JsonIgnore]
+	public JsonSerializerOptions SerializerOptions { get; set; }
 
-	/// <summary>Gets or creates a reference to a <see cref="Collection"/>.</summary>
-	/// <param name="collectionName">Name of the <see cref="Collection"/> to get.</param>
-	/// <returns>The associated <see cref="Collection"/>.</returns>
-	Collection GetCollection(string collectionName);
-	
-	/// <summary>Returns a <see cref="ReadOnlyCollection{Collection}"/> of the <see cref="Collection"/>s of the database.</summary>
-	/// <returns>A <see cref="ReadOnlyCollection{Collection}"/> that can be used to iterate over the <see cref="Collection"/>s of the database.</returns>
-	ReadOnlyCollection<Collection> GetCollections();
+	public List<Collection> Collections { get; set; } = [];
 
-	/// <summary>Serializes the database to the data source file. If the database is in-memory only, throws <see cref="InvalidOperationException"/>. If a <see cref="Collection"/> has an open <see cref="Transaction"/>, throws <see cref="UnresolvedTransactionException"/>.</summary>
-	void Persist();
-}
+	public IEnumerator GetEnumerator() => Collections.GetEnumerator();
 
-public class Alla : IAlla
-{
-	private readonly AllaOptions _options;
-
-	private readonly JsonSerializerOptions _serializerOptions;
-
-	[JsonInclude]
-	private readonly List<Collection> Collections = [];
-
-	/// <summary>Creates a new instance of <see cref="Alla"/> using the specified configuration of <see cref="AllaOptions"/>.</summary>
-	/// <param name="options">A configuration of <see cref="AllaOptions"/> from the DI container.</param>
-	public Alla(IOptions<AllaOptions> options)
-	{
-		ArgumentNullException.ThrowIfNull(options);
-		_options = options.Value;
-
-		_serializerOptions = new()
-		{
-			WriteIndented = _options.IsPrettyPrint,
-		};
-
-		if (_options.IsEnumStrings)
-		{
-			_serializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
-		}
-
-		EnsureCreated();
-		Collections = Load();
-	}
-
-	/// <summary>Creates a new instance of <see cref="Alla"/> using the specified instance of <see cref="AllaOptions"/>.</summary>
-	/// <param name="options">An instance of <see cref="AllaOptions"/>.</param>
 	public Alla(AllaOptions options)
 	{
-		_options = options;
+		Options = options;
 
-		_serializerOptions = new()
+		SerializerOptions = new()
 		{
-			WriteIndented = _options.IsPrettyPrint,
+			WriteIndented = Options.PrettyPrint,
 		};
 
-		if (_options.IsEnumStrings)
+		if (Options.EnumStrings)
 		{
-			_serializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+			SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 		}
 
 		EnsureCreated();
-		Collections = Load();
+		Load();
 	}
 
-	/// <inheritdoc cref="IAlla.DropDatabase">
 	public void DropDatabase() => Collections.Clear();
 
-	/// <inheritdoc cref="IAlla.DropCollection(string)"/>
-	public void DropCollection(string collectionName) => Collections
-		.RemoveAll((x) => x.Name == collectionName);
+	public void DropCollection(string name) => Collections.RemoveAll((x) => x.Name == name);
 
-	/// <inheritdoc cref="IAlla.GetCollection(string)"/>
-	public Collection GetCollection(string collectionName)
+	public Collection GetCollection(string name)
 	{
-		Collection? collection = Collections.Find((x) => x.Name == collectionName);
-
+		Collection? collection = Collections.Find((x) => x.Name == name);
+		
 		if (collection is null)
 		{
-			collection = new(_options, collectionName);
+			collection = new() { Name = name };
 			Collections.Add(collection);
 		}
-
+		
 		return collection;
 	}
 
-	/// <inheritdoc cref="IAlla.GetCollections"/>
-	public ReadOnlyCollection<Collection> GetCollections() => new(Collections);
-
-	/// <inheritdoc cref="IAlla.Persist"/>
 	public void Persist()
 	{
-		if (_options.DataSource == ":memory:") throw new InvalidOperationException(
-			"Database cannot be persisted because it is in-memory only."
-		);
+		if (Options.Datasource == ":memory:") throw new Exception("Database cannot be persisted as it is in-memory only.");
 
-		if (Collections.Any((x) => x.OpenTransaction is not null)) throw new UnresolvedTransactionException(
-			"The transaction must be resolved before persisting the collection."
-		);
-		
-		File.WriteAllText(
-			_options.DataSource,
-			JsonSerializer.Serialize(
-				Collections.Where((x) => x.Documents.Count > 0),
-				_serializerOptions
-			)
-		);
+		bool hasOpenTransaction = Collections.Any((x) => x.Transactions.Count > 0);
+		if (hasOpenTransaction) throw new Exception("The transaction must be resolved before persisting the collection.");
+
+		DeletePreviousPersistedFiles();
+
+		PartitionStrategy strategy = Options.PartitionOptions.Strategy;
+
+		if (strategy == PartitionStrategy.None)
+		{
+			PersistPartitionStrategyNone();
+		}
+		else if (strategy == PartitionStrategy.ByCollection)
+		{
+			PersistPartitionStrategyByCollection();
+		}
+		else
+		{
+			throw new Exception($"Not implemented partition strategy {Options.PartitionOptions.Strategy}");
+		}
 	}
 
-	private List<Collection> Load() => JsonSerializer.Deserialize<List<Collection>>(File.ReadAllText(_options.DataSource))
-		?? throw new IllegalDeserializationException();
+	private void DeletePreviousPersistedFiles()
+	{
+		string datasourceFolder = Path.GetDirectoryName(Path.GetFullPath(Options.Datasource))
+			?? Options.Datasource;
+
+		Directory
+			.EnumerateFiles(datasourceFolder, Options.GetPartitionFilename())
+			.ToList().ForEach(File.Delete);
+	}
+
+	private void PersistPartitionStrategyNone() => File.WriteAllText(
+		Options.Datasource,
+		JsonSerializer.Serialize(
+			Collections.Where((x) => x.Documents.Count > 0),
+			SerializerOptions
+		)
+	);
+
+	private void PersistPartitionStrategyByCollection()
+	{
+		List<Collection> collectionsWithDocuments = [.. Collections.Where((x) => x.Documents.Count > 0)];
+
+		int partitionSize = Options.PartitionOptions.MaxSize;
+		bool shouldPartitionCollections = partitionSize > 0;
+
+		if (shouldPartitionCollections)
+		{
+			List<Collection> partitionedCollections = [];
+
+			partitionedCollections = [.. collectionsWithDocuments
+				.SelectMany((x) => x.Partition(partitionSize))
+			];
+
+			collectionsWithDocuments.Clear();
+			collectionsWithDocuments.AddRange(partitionedCollections);
+		}
+
+		for (int i = 0; i < collectionsWithDocuments.Count; i++)
+		{
+			List<Collection> collectionSerializable = [collectionsWithDocuments[i]];
+			File.WriteAllText(
+				Options.GetPartitionFilename(i),
+				JsonSerializer.Serialize(
+					collectionSerializable,
+					SerializerOptions
+				)
+			);
+		}
+	}
 
 	private void EnsureCreated()
 	{
-		if (File.Exists(_options.DataSource)) return;
+		if (Options.Datasource == ":memory:") return;
+
+		if (File.Exists(Options.Datasource)) return;
+		
 		Persist();
 	}
+
+	private void Load()
+	{
+		if (Options.PartitionOptions.Strategy == PartitionStrategy.None) LoadWithoutPartition();
+		else LoadWithPartition();
+	}
+
+	private void LoadWithoutPartition() => Collections = JsonSerializer.Deserialize<List<Collection>>(
+		File.ReadAllText(Options.Datasource)
+	) ?? throw new Exception("Failed to deserialize datasource.");
+
+	private void LoadWithPartition()
+	{
+		string datasourceFolder = Path.GetDirectoryName(Path.GetFullPath(Options.Datasource)) ?? Options.Datasource;
+
+		IEnumerable<IGrouping<string, Collection>> partitions = Directory
+			.EnumerateFiles(datasourceFolder, Options.GetPartitionFilename())
+			.Select((x) => JsonSerializer.Deserialize<List<Collection>>(File.ReadAllText(x)))
+			.Select((x) => x ?? throw new Exception("Failed to deserialize datasource partition."))
+			.SelectMany((x) => x)
+			.GroupBy((x) => x.Name);
+
+		foreach (IGrouping<string, Collection> partition in partitions)
+		{
+			Collection? collection = Collections.Find((x) => x.Name == partition.Key);
+
+			if (collection is not null) UpdateCollectionWithPartition(collection, partition);
+			else AddCollectionInitialPartition(partition);
+		}
+	}
+
+	private void UpdateCollectionWithPartition(Collection collection, IGrouping<string, Collection> partition) =>
+		collection.AddRange(partition.SelectMany((x) => x.Documents.Select((x) => x.Fields)));
+
+	private void AddCollectionInitialPartition(IGrouping<string, Collection> partition) => Collections.Add(new()
+	{
+		Name = partition.Key,
+		Documents = [.. partition.SelectMany((x) => x.Documents)],
+	});
 }

@@ -1,117 +1,137 @@
-using System.Collections.ObjectModel;
-using System.Runtime.Serialization;
+using System.Collections;
 using System.Text.Json.Serialization;
-using AllaDb.Exceptions;
 
 namespace AllaDb;
 
-/// <summary>Represents a collection of <see cref="Document"/>s.</summary>
-public class Collection(AllaOptions options, string name)
+public class Collection
 {
-	private readonly AllaOptions _options = options;
+	public required string Name { get; set; }
 
-	/// <summary>Gets the unique name of this <see cref="Collection"/>.</summary>
-	public string Name { get; set; } = name;
+	[JsonIgnore]
+	public List<Transaction> Transactions = [];
 
-	[JsonInclude]
-	internal List<Document> Documents { get; set; } = [];
+	[JsonIgnore]
+	public bool HasTransaction { get => Transactions.Count > 0; }
 
-	internal Transaction? OpenTransaction { get; set; }
+	public List<Document> Documents { get; set; } = [];
 
-	/// <summary>Method that is called when deserializing the database to set the associated <see cref="Collection"/> references in <see cref="Document"/>s and <see cref="Constraint"/>s.</summary>
-	[OnDeserialized]
-	public void OnDeserialized()
+	public IEnumerator GetEnumerator() => GetDocuments().GetEnumerator();
+
+	public void Clear()
 	{
-		Documents.ForEach((x) => x.Collection = this);
-	}
-
-	#region Collections
-
-	/// <summary>Removes all <see cref="Document"/>s from the <see cref="Collection"/>.</summary>
-	public void Truncate()
-	{
-		ThrowIfRequiredTransactionMissing();
-
-		if (OpenTransaction is not null) GetDocuments().ToList().ForEach(OpenTransaction.AddDocumentDeletion);
-		else Documents.Clear();
-	}
-
-	#endregion
-
-	#region Documents
-
-	/// <summary>Adds a <see cref="Document"/> to the <see cref="Collection"/>.</summary>
-	/// <param name="fields">The <see cref="Dictionary{string, object?}"/> whose elements are copied to the new <see cref="Document"/>.</param>
-	/// <returns>The created <see cref="Document"/>.</returns>
-	public Document CreateDocument(Dictionary<string, object?> fields)
-	{
-		ThrowIfRequiredTransactionMissing();
-		
-		Document document = new(fields) { Collection = this };
-		
-		if (OpenTransaction is not null) OpenTransaction.AddDocumentWrite(document);
-		else Documents.Add(document);
-		
-		return document;
-	}
-
-	/// <summary>Deletes the <see cref="Document"/> with the specified Id from the <see cref="Collection"/>. If the specified <see cref="Document"/> is not found, throws an <see cref="ArgumentOutOfRangeException"/>.</summary>
-	/// <param name="documentId">The Id of the <see cref="Document"/> to delete.</param>
-	public void DeleteDocument(string documentId)
-	{
-		ThrowIfRequiredTransactionMissing();
-
-		Document document = GetDocuments().FirstOrDefault((x) => x.Id == documentId)
-			?? throw new ArgumentOutOfRangeException(nameof(documentId), documentId);
-
-		if (OpenTransaction is not null) OpenTransaction.AddDocumentDeletion(document);
-		else Documents.Remove(document);
-	}
-
-	/// <summary>Gets the <see cref="Document"/> associated with the specified Id.</summary>
-	/// <param name="documentId">The Id of the <see cref="Document"/> to get.</param>
-	/// <returns>The <see cref="Document"/> associated with the specified Id. If the specified Id is not found, throws an <see cref="ArgumentOutOfRangeException"/>.</returns>
-	public Document GetDocument(string documentId) => GetDocuments().FirstOrDefault((x) => x.Id == documentId)
-		?? throw new ArgumentOutOfRangeException(nameof(documentId), documentId);
-
-	/// <summary>Returns a <see cref="ReadOnlyCollection{Document}"/> of the <see cref="Document"/>s of the <see cref="Collection"/>.</summary>
-	/// <returns>A <see cref="ReadOnlyCollection{Document}"/> that can be used to iterate over the <see cref="Document"/>s of the <see cref="Collection"/>.</returns>
-	public ReadOnlyCollection<Document> GetDocuments()
-	{
-		if (OpenTransaction is null) return new(Documents);
-
-		IEnumerable<Document> notDeletedDocuments = Documents.Where((live) =>
+		if (!HasTransaction)
 		{
-			return OpenTransaction.Documents(Transaction.ChangeAction.Deleted).Find((inTx) => inTx.Id == live.Id) is null;
-		});
+			Documents.Clear();
+			return;
+		}
 
-		return new([..notDeletedDocuments, ..OpenTransaction.Documents(Transaction.ChangeAction.Written)]);
+		Documents.ForEach((document) => Transactions.Last().Changes.Add(new(
+			Transaction.Action.Delete,
+			DocumentChange: document
+		)));
 	}
 
-	#endregion
+	public void Add(Dictionary<string, object?> fields)
+	{
+		Document document = new()
+		{
+			Fields = fields,
+			Collection = this,
+		};
+		
+		if (!HasTransaction)
+		{
+			Documents.Add(document);
+			return;
+		}
 
-	#region Transactions
+		Transactions.Last().Changes.Add(new(
+			Transaction.Action.Write,
+			DocumentChange: document
+		));
+	}
 
-	/// <summary>Creates a <see cref="Transaction"/> on the <see cref="Collection"/>.</summary>
-	/// <returns>The created <see cref="Transaction"/>. If the <see cref="Collection"/> already has a <see cref="Transaction"/> in-progress, throws <see cref="UnresolvedTransactionException"/>.</returns>
+	public void AddRange(IEnumerable<Dictionary<string, object?>> fields)
+	{
+		foreach (Dictionary<string, object?> field in fields) Add(field);
+	}
+
+	public void Remove(Document document)
+	{
+		if (!HasTransaction)
+		{
+			Documents.Remove(document);
+			return;
+		}
+
+		Transactions.Last().Changes.Add(new(
+			Transaction.Action.Delete,
+			DocumentChange: document
+		));
+	}
+
+	public void RemoveAll(Func<Document, bool> predicate)
+	{
+		if (!HasTransaction)
+		{
+			Documents.RemoveAll(new(predicate));
+			return;
+		}
+
+		Documents.Where(predicate).ToList().ForEach((document) => Transactions.Last().Changes.Add(new(
+			Transaction.Action.Delete,
+			DocumentChange: document
+		)));
+	}
+
 	public Transaction CreateTransaction()
 	{
-		if (OpenTransaction is not null) throw new UnresolvedTransactionException(
-			"Resolve the transaction before opening a new transaction."
-		);
-		
-		OpenTransaction = new(this);
-		return OpenTransaction;
+		Transaction transaction = new(this);
+		Transactions.Add(transaction);
+		return transaction;
 	}
 
-	#endregion
-
-	internal void ThrowIfRequiredTransactionMissing()
+	public List<Collection> Partition(int size)
 	{
-		if (!_options.AreTransactionsRequired || OpenTransaction is not null) return;
+		List<Collection> partitions = [];
 
-		throw new InvalidOperationException(
-			"Transactions are required."
+		int i = 0;
+		while (i < Documents.Count)
+		{
+			int count = Documents.Count - i > size
+				? size
+				: Documents.Count - i;
+			
+			partitions.Add(new()
+			{
+				Name = Name,
+				Documents = Documents.GetRange(i, count),
+			});
+
+			i += size;
+		}
+
+		return partitions;
+	}
+
+	private List<Document> GetDocuments()
+	{
+		if (!HasTransaction) return Documents;
+
+		return Transactions.Aggregate(new List<Document>(Documents), ReduceTxDocuments);
+	}
+
+	private List<Document> ReduceTxDocuments(List<Document> accumulator, Transaction item)
+	{
+		IEnumerable<Document> unchanged = accumulator.Where((doc) => !item.Changes
+			.Any((change) => change.DocumentChange?.Id == doc.Id)
 		);
+
+		IEnumerable<Document> writtenDocuments = item.Changes
+			.Where((x) => x.Action == Transaction.Action.Write)
+			.Where((x) => x.DocumentChange is not null)
+			.Select((x) => x.DocumentChange!);
+
+		return [.. unchanged.Union(writtenDocuments)];
 	}
 }
