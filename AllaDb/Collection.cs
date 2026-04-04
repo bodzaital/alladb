@@ -91,29 +91,6 @@ public class Collection
 		return transaction;
 	}
 
-	public List<Collection> Partition(int size)
-	{
-		List<Collection> partitions = [];
-
-		int i = 0;
-		while (i < Documents.Count)
-		{
-			int count = Documents.Count - i > size
-				? size
-				: Documents.Count - i;
-			
-			partitions.Add(new()
-			{
-				Name = Name,
-				Documents = Documents.GetRange(i, count),
-			});
-
-			i += size;
-		}
-
-		return partitions;
-	}
-
 	private List<Document> GetDocuments()
 	{
 		if (!HasTransaction) return Documents;
