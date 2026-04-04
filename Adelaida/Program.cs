@@ -1,6 +1,6 @@
 ﻿using AllaDb;
 
-string connectionString = "Data Source = database.json, Enum Strings = true, Pretty Print = true, Partition Options: Strategy = ByCollection, Partition Options: Max Size = 1";
+string connectionString = "Data Source = database.json, Enum Strings = true, Pretty Print = true";
 
 Alla db = new(AllaOptions.FromConnectionString(connectionString));
 
