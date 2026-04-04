@@ -3,20 +3,25 @@ using System.Text.Json.Serialization;
 
 namespace AllaDb;
 
+/// <summary>A collection of documents.</summary>
 public class Collection
 {
+	/// <summary>Unique name of this collection.</summary>
 	public required string Name { get; set; }
 
-	[JsonIgnore]
-	public List<Transaction> Transactions = [];
+	internal List<Transaction> Transactions = [];
 
+	/// <summary>Returns true if this collection has any unresolved transactions.</summary>
 	[JsonIgnore]
 	public bool HasTransaction { get => Transactions.Count > 0; }
 
-	public List<Document> Documents { get; set; } = [];
+	[JsonInclude]
+	internal List<Document> Documents { get; set; } = [];
 
+	/// <summary>Exposes the enumerator of the underlying list of documents.</summary>
 	public IEnumerator GetEnumerator() => GetDocuments().GetEnumerator();
 
+	/// <summary>Deletes all documents of this collection.</summary>
 	public void Clear()
 	{
 		if (!HasTransaction)
@@ -31,7 +36,8 @@ public class Collection
 		)));
 	}
 
-	public void Add(Dictionary<string, object?> fields)
+	/// <summary>Adds the specified fields to a new document in this collection and returns the created document.</summary>
+	public Document Add(Dictionary<string, object?> fields)
 	{
 		Document document = new()
 		{
@@ -42,20 +48,25 @@ public class Collection
 		if (!HasTransaction)
 		{
 			Documents.Add(document);
-			return;
+		}
+		else
+		{
+			Transactions.Last().Changes.Add(new(
+				Transaction.Action.Write,
+				DocumentChange: document
+			));
 		}
 
-		Transactions.Last().Changes.Add(new(
-			Transaction.Action.Write,
-			DocumentChange: document
-		));
+		return document;
 	}
 
-	public void AddRange(IEnumerable<Dictionary<string, object?>> fields)
+	/// <summary>Adds the specified list of fields to new documents and returns the created documents.</summary>
+	public List<Document> AddRange(IEnumerable<Dictionary<string, object?>> fields)
 	{
-		foreach (Dictionary<string, object?> field in fields) Add(field);
+		return [.. fields.Select(Add)];
 	}
 
+	/// <summary>Removes the specific object from the collection.</summary>
 	public void Remove(Document document)
 	{
 		if (!HasTransaction)
@@ -70,6 +81,7 @@ public class Collection
 		));
 	}
 
+	/// <summary>Deletes all documents from the collection that match the conditions defined by the specified predicate</summary>
 	public void RemoveAll(Func<Document, bool> predicate)
 	{
 		if (!HasTransaction)
@@ -84,6 +96,7 @@ public class Collection
 		)));
 	}
 
+	/// <summary>Adds a new transaction over this collection to this collection's stack.</summary>
 	public Transaction CreateTransaction()
 	{
 		Transaction transaction = new(this);

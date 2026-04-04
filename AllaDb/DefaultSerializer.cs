@@ -2,8 +2,10 @@ using System.Text.Json;
 
 namespace AllaDb;
 
+/// <summary>The default serializer used by the database when persisting.</summary>
 public class DefaultSerializer : IAllaSerializer
 {
+	/// <inheritdoc />
 	public void EnsureCreated(Alla db)
 	{
 		if (File.Exists(db.Options.Datasource)) return;
@@ -11,6 +13,7 @@ public class DefaultSerializer : IAllaSerializer
 		Persist(db);
 	}
 
+	/// <inheritdoc />
 	public List<Collection> Load(Alla db)
 	{
 		return JsonSerializer.Deserialize<List<Collection>>(
@@ -18,6 +21,7 @@ public class DefaultSerializer : IAllaSerializer
 		) ?? throw new Exception("Failed to deserialize datasource.");
 	}
 
+	/// <inheritdoc />
 	public void Persist(Alla db)
 	{
 		File.WriteAllText(

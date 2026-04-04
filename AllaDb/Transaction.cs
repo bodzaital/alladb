@@ -2,51 +2,62 @@
 
 namespace AllaDb;
 
-public class Transaction(Collection collection) : IDisposable
+/// <summary>Collection and document level transactions.</summary>
+public class Transaction : IDisposable
 {
-	public enum Resolution
+	internal enum Resolution
 	{
 		Committed,
 		RolledBack,
 	}
 
-	public enum Action
+	internal enum Action
 	{
 		Write,
 		Delete,
 	}
 
-	public record FieldChange(
+	internal record FieldChange(
 		string Id,
 		string Key,
 		object? Value
 	);
 
-	public record Change(
+	internal record Change(
 		Action Action,
 		FieldChange? FieldChange = null,
 		Document? DocumentChange = null
 	);
 
-	public Resolution Result = Resolution.Committed;
+	private Collection _collection;
 
-	public List<Change> Changes { get; set; } = [];
+	internal Resolution Result = Resolution.Committed;
 
+	internal List<Change> Changes { get; set; } = [];
+
+	internal Transaction(Collection collection)
+	{
+		_collection = collection;
+	}
+
+	/// <summary>Resolves the transaction. If unmarked, the default resolution is to rollback.</summary>
 	public void Dispose()
 	{
 		if (Result == Resolution.Committed)
 		{
 			Changes.ForEach(CommitChange);
 		}
-
-		collection.Transactions.Remove(this);
+		
+		_collection.Transactions.Remove(this);
 	}
 
+	/// <summary>Marks this transaction to be committed.</summary>
 	public void Commit()
 	{
 		Result = Resolution.Committed;
 	}
 
+	/// <summary>Marks this transaction to be rolled back. This is the default resolution.</summary>
 	public void Rollback()
 	{
 		Result = Resolution.RolledBack;
@@ -62,7 +73,7 @@ public class Transaction(Collection collection) : IDisposable
 	{
 		if (fieldChange is null) return;
 
-		Document document = collection.Documents.First((x) => x.Id == fieldChange.Id);
+		Document document = _collection.Documents.First((x) => x.Id == fieldChange.Id);
 
 		if (action == Action.Write)
 		{
@@ -81,12 +92,12 @@ public class Transaction(Collection collection) : IDisposable
 
 		if (action == Action.Write)
 		{
-			collection.Documents.Add(document);
+			_collection.Documents.Add(document);
 		}
 
 		if (action == Action.Delete)
 		{
-			collection.Documents.Remove(document);
+			_collection.Documents.Remove(document);
 		}
 	}
 }

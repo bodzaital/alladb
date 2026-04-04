@@ -3,19 +3,24 @@ using System.Text.Json.Serialization;
 
 namespace AllaDb;
 
+/// <summary>A collection of key-value pairs identified by a unique GUID.</summary>
 public class Document
 {
-	[JsonIgnore]
-	public Collection? Collection { get; set; }
-
+	/// <summary>Unique identifier of this document.</summary>
 	public string Id { get; set; } = Guid.NewGuid().ToString();
 
-	public Dictionary<string, object?> Fields { get; set; } = [];
+	internal Collection? Collection { get; set; }
 
+	[JsonInclude]
+	internal Dictionary<string, object?> Fields { get; set; } = [];
+
+	/// <summary>Exposes the enumerator of the underlying dictionary of key-value pairs.</summary>
 	public IEnumerator GetEnumerator() => GetFields().GetEnumerator();
 
+	/// <summary>Determines whether the document contains the specified key.</summary>
 	public bool ContainsKey(string key) => GetFields().ContainsKey(key);
 
+	/// <summary>Removes the value with the specified key from the document.</summary>
 	public void Remove(string key)
 	{
 		if (!Collection!.HasTransaction)
@@ -30,6 +35,7 @@ public class Document
 		));
 	}
 
+	/// <summary>Gets the value associated with the specified key.</summary>
 	public bool TryGetValue<T>(string key, out T? value)
 	{
 		bool doesContainKey = ContainsKey(key);
@@ -41,6 +47,7 @@ public class Document
 		return doesContainKey;
 	}
 
+	/// <summary>Adds a key-value pair to the document if the key does not already exist, or updates a key-value pair in the document if the key already exists.</summary>
 	public void AddOrUpdate(string key, object? value)
 	{
 		if (!Collection!.HasTransaction)

@@ -4,24 +4,24 @@ using System.Text.Json.Serialization;
 
 namespace AllaDb;
 
+/// <summary>A lightweight, limited application database storing key-value pairs.</summary>
 public class Alla
 {
-	[JsonIgnore]
-	public AllaOptions Options { get; set; }
+	private readonly IAllaSerializer _serializer;
 
-	[JsonIgnore]
-	public JsonSerializerOptions SerializerOptions { get; set; }
+	internal AllaOptions Options { get; set; }
 
-	public List<Collection> Collections { get; set; } = [];
+	internal JsonSerializerOptions SerializerOptions { get; set; }
 
-	public IAllaSerializer Serializer { get; set; }
+	internal List<Collection> Collections { get; set; } = [];
 
-	public IEnumerator GetEnumerator() => Collections.GetEnumerator();
-
+	/// <summary>Creates a new instance of Alla Db.</summary>
+	/// <param name="options">Configuration for the database.</param>
+	/// <param name="serializer">Serializer used for persisting the database. If null, uses the default serializer.</param>
 	public Alla(AllaOptions options, IAllaSerializer? serializer = null)
 	{
 		Options = options;
-		Serializer = serializer ?? new DefaultSerializer();
+		_serializer = serializer ?? new DefaultSerializer();
 
 		SerializerOptions = new()
 		{
@@ -37,10 +37,16 @@ public class Alla
 		Collections = Load();
 	}
 
+	/// <summary>Exposes the enumerator of the underlying list of collections.</summary>
+	public IEnumerator GetEnumerator() => Collections.GetEnumerator();
+
+	/// <summary>Deletes the database and all collections.</summary>
 	public void DropDatabase() => Collections.Clear();
 
+	/// <summary>Deletes a collection and all documents.</summary>
 	public void DropCollection(string name) => Collections.RemoveAll((x) => x.Name == name);
 
+	/// <summary>Creates a collection with the specified name or returns one if already exists.</summary>
 	public Collection GetCollection(string name)
 	{
 		Collection? collection = Collections.Find((x) => x.Name == name);
@@ -54,27 +60,35 @@ public class Alla
 		return collection;
 	}
 
+	/// <summary>Saves all non-empty collections based on the partition strategy and serializer.</summary>
 	public void Persist()
 	{
-		if (Options.Datasource == ":memory:") throw new Exception("Database cannot be persisted as it is in-memory only.");
+		if (Options.Datasource == ":memory:") 
+		{
+			throw new Exception("Database cannot be persisted as it is in-memory only.");
+		}
 
 		bool hasOpenTransaction = Collections.Any((x) => x.Transactions.Count > 0);
-		if (hasOpenTransaction) throw new Exception("Any open transactions must be resolved before persisting the collection.");
 
-		Serializer.Persist(this);
+		if (hasOpenTransaction)
+		{
+			throw new Exception("Any open transactions must be resolved before persisting the collection.");
+		}
+
+		_serializer.Persist(this);
 	}
 
 	private void EnsureCreated()
 	{
 		if (Options.Datasource == ":memory:") return;
 		
-		Serializer.EnsureCreated(this);
+		_serializer.EnsureCreated(this);
 	}
 
 	private List<Collection> Load()
 	{
 		if (Options.Datasource == ":memory:") return [];
 
-		return Serializer.Load(this);
+		return _serializer.Load(this);
 	}
 }

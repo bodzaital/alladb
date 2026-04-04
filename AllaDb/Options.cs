@@ -1,15 +1,20 @@
 namespace AllaDb;
 
+/// <summary>Configuration for the database.</summary>
 public class AllaOptions(string datasource)
 {
+	/// <summary>The database file. The special value :memory: will cause exceptions when persisting the database.</summary>
 	public string Datasource { get; set; } = datasource;
 
+	/// <summary>If true, saves the database using line breaks and indents.</summary>
 	public bool PrettyPrint { get; set; } = false;
 
+	/// <summary>If true, saves Enum values with constants instead of ordinals.</summary>
 	public bool EnumStrings { get; set; } = true;
 
-	public PartitionOptions PartitionOptions { get; set; } = new();
+	private PartitionOptions PartitionOptions { get; set; } = new();
 
+	/// <summary>Creates an instance of AllaOptions from a connection string.</summary>
 	public static AllaOptions FromConnectionString(string connectionString)
 	{
 		StringSplitOptions splitOptions = StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries;
@@ -34,7 +39,7 @@ public class AllaOptions(string datasource)
 		return options;
 	}
 
-	public string GetPartitionFilename(int? id = null)
+	private string GetPartitionFilename(int? id = null)
 	{
 		string dotExt = Path.GetExtension(Datasource);
 
@@ -44,7 +49,7 @@ public class AllaOptions(string datasource)
 	}
 }
 
-public class PartitionOptions
+internal class PartitionOptions
 {
 	public PartitionStrategy Strategy { get; set; } = PartitionStrategy.None;
 
@@ -73,7 +78,7 @@ public class PartitionOptions
 	}
 }
 
-public enum PartitionStrategy
+internal enum PartitionStrategy
 {
 	None,
 	ByCollection,
