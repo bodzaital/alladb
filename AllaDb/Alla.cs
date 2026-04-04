@@ -147,7 +147,9 @@ public class Alla
 
 	private void LoadWithPartition()
 	{
-		string datasourceFolder = Path.GetDirectoryName(Path.GetFullPath(Options.Datasource)) ?? Options.Datasource;
+		string datasourceFolder = !Path.IsPathRooted(Options.Datasource)
+			? Path.GetDirectoryName(Path.Join(Directory.GetCurrentDirectory(), Options.Datasource))!
+			: Options.Datasource;
 
 		IEnumerable<IGrouping<string, Collection>> partitions = Directory
 			.EnumerateFiles(datasourceFolder, Options.GetPartitionFilename())
