@@ -1,6 +1,6 @@
 ﻿namespace AllaDb.Tests;
 
-public class DocumentKeyDeleteTests
+public class DocumentKeyDeleteTests : DocumentTests
 {
     [Test]
     public void CanDeleteKey_WithNoTransaction_WithTryGetValue()
@@ -172,14 +172,4 @@ public class DocumentKeyDeleteTests
 			Assert.That(resultValue, Is.EqualTo("original value"));
 		}
 	}
-
-    private static Collection CreateTestCollection() => new()
-    {
-        Name = "Test collection"
-    };
-
-    private static Dictionary<string, object?> CreateTestField() => new()
-    {
-        { "key", "original value" },
-    };
 }

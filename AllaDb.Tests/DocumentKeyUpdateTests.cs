@@ -1,6 +1,6 @@
 ﻿namespace AllaDb.Tests;
 
-public class DocumentKeyUpdateTests
+public class DocumentKeyUpdateTests : DocumentTests
 {
     [Test]
     public void CanUpdateKey_WithNoTransaction_WithTryGetValue()
@@ -163,14 +163,4 @@ public class DocumentKeyUpdateTests
 			Assert.That(result, Is.EqualTo("original value"));
 		}
 	}
-
-    private static Collection CreateTestCollection() => new()
-    {
-        Name = "Test collection"
-    };
-
-    private static Dictionary<string, object?> CreateTestField() => new()
-    {
-        { "key", "original value" },
-    };
 }
