@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace AllaDb;
@@ -96,7 +97,20 @@ public class Collection
 		)));
 	}
 
-	/// <summary>Adds a new transaction over this collection to this collection's stack.</summary>
+	/// <summary>Gets the document associated with the specified ID.</summary>
+	public Document? GetDocument(string id)
+	{
+		return GetDocuments().Find((x) => x.Id == id);
+	}
+
+	/// <summary>Gets the document associated with the specified ID.</summary>
+	public bool TryGetDocument(string id, [NotNullWhen(true)] out Document? document)
+	{
+		document = GetDocuments().Find((x) => x.Id == id);
+		return document is not null;
+	}
+
+	/// <summary>Adds a new transaction over this collection to this collection's transaction stack.</summary>
 	public Transaction CreateTransaction()
 	{
 		Transaction transaction = new(this);
