@@ -52,15 +52,17 @@ public class Transaction : IDisposable
 	}
 
 	/// <summary>Marks this transaction to be committed. This is the default resolution.</summary>
-	public void Commit()
+	public Transaction Commit()
 	{
 		Result = Resolution.Committed;
+		return this;
 	}
 
 	/// <summary>Marks this transaction to be rolled back.</summary>
-	public void Rollback()
+	public Transaction Rollback()
 	{
 		Result = Resolution.RolledBack;
+		return this;
 	}
 
 	private void CommitChange(Change change)
