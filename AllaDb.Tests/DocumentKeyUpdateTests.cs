@@ -3,13 +3,29 @@
 public class DocumentKeyUpdateTests
 {
     [Test]
-    public void CanUpdateKey_WithNoTransaction()
+    public void CanUpdateKey_WithNoTransaction_WithTryGetValue()
     {
         Collection collection = CreateTestCollection();
         Document document = collection.Add(CreateTestField());
 
         document.AddOrUpdate("key", "updated value");
         document.TryGetValue("key", out string? result);
+
+		using (Assert.EnterMultipleScope())
+		{
+			Assert.That(collection.HasTransaction, Is.False);
+			Assert.That(result, Is.EqualTo("updated value"));
+		}
+    }
+
+    [Test]
+    public void CanUpdateKey_WithNoTransaction_WithGetValue()
+    {
+        Collection collection = CreateTestCollection();
+        Document document = collection.Add(CreateTestField());
+
+        document.AddOrUpdate("key", "updated value");
+        string? result = document.GetValue<string?>("key");
 
 		using (Assert.EnterMultipleScope())
 		{

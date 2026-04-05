@@ -3,7 +3,7 @@
 public class DocumentKeyDeleteTests
 {
     [Test]
-    public void CanDeleteKey_WithNoTransaction()
+    public void CanDeleteKey_WithNoTransaction_WithTryGetValue()
     {
         Collection collection = CreateTestCollection();
         Document document = collection.Add(CreateTestField());
@@ -14,6 +14,21 @@ public class DocumentKeyDeleteTests
 		using (Assert.EnterMultipleScope())
 		{
 			Assert.That(resultExists, Is.False);
+			Assert.That(resultValue, Is.Null);
+		}
+    }
+
+    [Test]
+    public void CanDeleteKey_WithNoTransaction_WithGetValue()
+    {
+        Collection collection = CreateTestCollection();
+        Document document = collection.Add(CreateTestField());
+
+        document.Remove("key");
+        string? resultValue = document.GetValue<string?>("key");
+
+		using (Assert.EnterMultipleScope())
+		{
 			Assert.That(resultValue, Is.Null);
 		}
     }

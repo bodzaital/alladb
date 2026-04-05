@@ -36,6 +36,16 @@ public class Document
 	}
 
 	/// <summary>Gets the value associated with the specified key.</summary>
+	public T? GetValue<T>(string key)
+	{
+		bool doesContainKey = ContainsKey(key);
+
+		return doesContainKey
+			? (T?)Convert.ChangeType(GetFields()[key], typeof(T))
+			: default;
+	}
+
+	/// <summary>Gets the value associated with the specified key.</summary>
 	public bool TryGetValue<T>(string key, out T? value)
 	{
 		bool doesContainKey = ContainsKey(key);
