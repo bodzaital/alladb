@@ -29,7 +29,7 @@ public class Transaction : IDisposable
 		Document? DocumentChange = null
 	);
 
-	private Collection _collection;
+	private readonly Collection _collection;
 
 	internal Resolution Result = Resolution.Committed;
 
@@ -40,7 +40,7 @@ public class Transaction : IDisposable
 		_collection = collection;
 	}
 
-	/// <summary>Resolves the transaction. If unmarked, the default resolution is to rollback.</summary>
+	/// <summary>Resolves the transaction. If unmarked, the default resolution is to commit.</summary>
 	public void Dispose()
 	{
 		if (Result == Resolution.Committed)
@@ -51,13 +51,13 @@ public class Transaction : IDisposable
 		_collection.Transactions.Remove(this);
 	}
 
-	/// <summary>Marks this transaction to be committed.</summary>
+	/// <summary>Marks this transaction to be committed. This is the default resolution.</summary>
 	public void Commit()
 	{
 		Result = Resolution.Committed;
 	}
 
-	/// <summary>Marks this transaction to be rolled back. This is the default resolution.</summary>
+	/// <summary>Marks this transaction to be rolled back.</summary>
 	public void Rollback()
 	{
 		Result = Resolution.RolledBack;
