@@ -14,7 +14,11 @@ public class Collection
 
 	/// <summary>Returns true if this collection has any unresolved transactions.</summary>
 	[JsonIgnore]
-	public bool HasTransaction { get => Transactions.Count > 0; }
+	public bool HasTransactions { get => Transactions.Count > 0; }
+
+	/// <summary>Gets the number of documents.</summary>
+	[JsonIgnore]
+	public int Count { get => GetDocuments().Count; }
 
 	[JsonInclude]
 	internal List<Document> Documents { get; set; } = [];
@@ -25,7 +29,7 @@ public class Collection
 	/// <summary>Deletes all documents of this collection.</summary>
 	public void Clear()
 	{
-		if (!HasTransaction)
+		if (!HasTransactions)
 		{
 			Documents.Clear();
 			return;
@@ -46,7 +50,7 @@ public class Collection
 			Collection = this,
 		};
 		
-		if (!HasTransaction)
+		if (!HasTransactions)
 		{
 			Documents.Add(document);
 		}
@@ -70,7 +74,7 @@ public class Collection
 	/// <summary>Removes the specific object from the collection.</summary>
 	public void Remove(Document document)
 	{
-		if (!HasTransaction)
+		if (!HasTransactions)
 		{
 			Documents.Remove(document);
 			return;
@@ -85,7 +89,7 @@ public class Collection
 	/// <summary>Deletes all documents from the collection that match the conditions defined by the specified predicate</summary>
 	public void RemoveAll(Func<Document, bool> predicate)
 	{
-		if (!HasTransaction)
+		if (!HasTransactions)
 		{
 			Documents.RemoveAll(new(predicate));
 			return;
@@ -120,7 +124,7 @@ public class Collection
 
 	private List<Document> GetDocuments()
 	{
-		if (!HasTransaction) return Documents;
+		if (!HasTransactions) return Documents;
 
 		return Transactions.Aggregate(new List<Document>(Documents), ReduceTxDocuments);
 	}

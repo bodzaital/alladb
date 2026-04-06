@@ -23,7 +23,7 @@ public class Document
 	/// <summary>Removes the value with the specified key from the document.</summary>
 	public void Remove(string key)
 	{
-		if (!Collection!.HasTransaction)
+		if (!Collection!.HasTransactions)
 		{
 			Fields.Remove(key);
 			return;
@@ -60,7 +60,7 @@ public class Document
 	/// <summary>Adds a key-value pair to the document if the key does not already exist, or updates a key-value pair in the document if the key already exists.</summary>
 	public void AddOrUpdate(string key, object? value)
 	{
-		if (!Collection!.HasTransaction)
+		if (!Collection!.HasTransactions)
 		{
 			Fields[key] = value;
 			return;
@@ -74,7 +74,7 @@ public class Document
 
 	private Dictionary<string, object?> GetFields()
 	{
-		if (!Collection!.HasTransaction) return Fields;
+		if (!Collection!.HasTransactions) return Fields;
 
 		return Collection.Transactions.Aggregate(new Dictionary<string, object?>(Fields), ReduceTxFields);
 	}
