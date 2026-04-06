@@ -16,8 +16,7 @@ public class Alla
 	internal List<Collection> Collections { get; set; } = [];
 
 	/// <summary>Creates a new instance of Alla Db.</summary>
-	/// <param name="options">Configuration for the database.</param>
-	/// <param name="serializer">Serializer used for persisting the database. If null, uses the default serializer.</param>
+	/// <param name="serializer">The serializer to use when persisting the database. If null, uses the default single-file serializer.</param>
 	public Alla(AllaOptions options, IAllaSerializer? serializer = null)
 	{
 		Options = options;
@@ -60,7 +59,7 @@ public class Alla
 		return collection;
 	}
 
-	/// <summary>Saves all non-empty collections based on the partition strategy and serializer.</summary>
+	/// <summary>Serializes the database based on the connection string and the serializer. Throws an exception for in-memory databases.</summary>
 	public void Persist()
 	{
 		if (Options.Datasource == ":memory:") 

@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace AllaDb;
 
-/// <summary>The default serializer used by the database when persisting.</summary>
+/// <summary>The default, single-file serializer used by the database when persisting.</summary>
 public class DefaultSerializer : IAllaSerializer
 {
 	/// <inheritdoc />
