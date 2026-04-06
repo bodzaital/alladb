@@ -88,6 +88,17 @@ public class Alla
 	{
 		if (Options.Datasource == ":memory:") return [];
 
-		return _serializer.Load(this);
+		List<Collection> loaded = _serializer.Load(this);
+		loaded.ForEach(SetCollectionReference);
+
+		return loaded;
+	}
+
+	private void SetCollectionReference(Collection collection)
+	{
+		collection.Documents.ForEach((document) =>
+		{
+			document.Collection = collection;
+		});
 	}
 }
