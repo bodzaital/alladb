@@ -16,8 +16,6 @@ public class Document
 
 	/// <summary>Exposes the enumerator of the underlying dictionary of key/value pairs.</summary>
 	public IEnumerator GetEnumerator() => GetFields().GetEnumerator();
-
-	// / <summary>Determines whether the document contains the specified key.</summary>
 	
 	/// <summary>Determines whether the document contains the specified key.</summary>
 	/// <param name="key">The key to locate in the fields.</param>
