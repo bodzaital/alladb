@@ -16,6 +16,7 @@ public class Alla
 	internal List<Collection> Collections { get; set; } = [];
 
 	/// <summary>Creates a new instance of Alla Db.</summary>
+	/// <param name="options">The instance of options to configure the database.</param>
 	/// <param name="serializer">The serializer to use when persisting the database. If null, uses the default single-file serializer.</param>
 	public Alla(AllaOptions options, IAllaSerializer? serializer = null)
 	{
@@ -37,15 +38,19 @@ public class Alla
 	}
 
 	/// <summary>Exposes the enumerator of the underlying list of collections.</summary>
+	/// <returns>An enumerator for the list of collections.</returns>
 	public IEnumerator GetEnumerator() => Collections.GetEnumerator();
 
-	/// <summary>Deletes the database and all collections.</summary>
+	/// <summary>Removes all collections from the database.</summary>
 	public void DropDatabase() => Collections.Clear();
 
-	/// <summary>Deletes a collection and all documents.</summary>
+	/// <summary>Removes the collection whose name matches the specified name.</summary>
+	/// <param name="name">The name of the collection to remove.</param>
 	public void DropCollection(string name) => Collections.RemoveAll((x) => x.Name == name);
 
-	/// <summary>Creates a collection with the specified name or returns one if already exists.</summary>
+	/// <summary>Creates a collection in the database if the name does not already exist, or gets the collection in the database if the name already exists.</summary>
+	/// <param name="name">The name of the collection to be created or whose collection should be retrieved.</param>
+	/// <returns>The collection associated with the specified name.</returns>
 	public Collection GetCollection(string name)
 	{
 		Collection? collection = Collections.Find((x) => x.Name == name);
@@ -59,7 +64,8 @@ public class Alla
 		return collection;
 	}
 
-	/// <summary>Returns all collections in this database.</summary>
+	/// <summary>Get all collections in the database.</summary>
+	/// <returns>All collections in the database.</returns>
 	public List<Collection> GetCollections()
 	{
 		return Collections;

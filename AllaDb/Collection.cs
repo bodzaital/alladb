@@ -16,17 +16,13 @@ public class Collection
 	[JsonIgnore]
 	public bool HasTransactions { get => Transactions.Count > 0; }
 
-	/// <summary>Gets the number of documents.</summary>
-	[JsonIgnore]
-	public int Count { get => GetDocuments().Count; }
-
 	[JsonInclude]
 	internal List<Document> Documents { get; set; } = [];
 
 	/// <summary>Exposes the enumerator of the underlying list of documents.</summary>
 	public IEnumerator GetEnumerator() => GetDocuments().GetEnumerator();
 
-	/// <summary>Deletes all documents of this collection.</summary>
+	/// <summary>Removes all documents from the collection.</summary>
 	public void Clear()
 	{
 		if (!HasTransactions)
@@ -41,7 +37,9 @@ public class Collection
 		)));
 	}
 
-	/// <summary>Adds the specified fields to a new document in this collection and returns the created document.</summary>
+	/// <summary>Adds a new document with the specified fields to the end of the collection.</summary>
+	/// <param name="fields">The fields of a new document to be added to the end of the collection.</param>
+	/// <returns>The new document in the collection.</returns>
 	public Document Add(Dictionary<string, object?> fields)
 	{
 		Document document = new()
@@ -65,13 +63,16 @@ public class Collection
 		return document;
 	}
 
-	/// <summary>Adds the specified list of fields to new documents and returns the created documents.</summary>
+	/// <summary>Adds the specified list of fields to the end of the collection.</summary>
+	/// <param name="fields">The list of fields that should be added to the end of the collection.</param>
+	/// <returns>The list of new documents in the collection.</returns>
 	public List<Document> AddRange(IEnumerable<Dictionary<string, object?>> fields)
 	{
 		return [.. fields.Select(Add)];
 	}
 
-	/// <summary>Removes the specific object from the collection.</summary>
+	/// <summary>Removes the specific document from the collection.</summary>
+	/// <param name="document">The document to remove from the collection.</param>
 	public void Remove(Document document)
 	{
 		if (!HasTransactions)
@@ -86,7 +87,8 @@ public class Collection
 		));
 	}
 
-	/// <summary>Deletes all documents from the collection that match the conditions defined by the specified predicate</summary>
+	/// <summary>Removes all document that match the condition defined by the specified delegate.</summary>
+	/// <param name="predicate">The function delegate that defines the condition of the documents to remove.</param>
 	public void RemoveAll(Func<Document, bool> predicate)
 	{
 		if (!HasTransactions)
@@ -102,19 +104,25 @@ public class Collection
 	}
 
 	/// <summary>Gets the document associated with the specified ID.</summary>
+	/// <param name="id">The ID of the document to get.</param>
+	/// <returns>The document if the collection contains it by ID; otherwise, null.</returns>
 	public Document? GetDocument(string id)
 	{
 		return GetDocuments().Find((x) => x.Id == id);
 	}
 
 	/// <summary>Gets the document associated with the specified ID.</summary>
+	/// <param name="id">The ID of the document to get.</param>
+	/// <param name="document">When this method returns, contains the document associated with the specified ID, if the ID is found; otherwise, null. This parameter is passed uninitialized.</param>
+	/// <returns>true if the collection contains a document with the specified ID; otherwise, false.</returns>
 	public bool TryGetDocument(string id, [NotNullWhen(true)] out Document? document)
 	{
 		document = GetDocuments().Find((x) => x.Id == id);
 		return document is not null;
 	}
 
-	/// <summary>Adds a new transaction over this collection to this collection's transaction stack.</summary>
+	/// <summary>Adds a new transaction over this collection to the end of the transaction stack.</summary>
+	/// <returns>The new transaction over this collection.</returns>
 	public Transaction CreateTransaction()
 	{
 		Transaction transaction = new(this);
@@ -122,7 +130,8 @@ public class Collection
 		return transaction;
 	}
 
-	/// <summary>Returns all documents in this collection.</summary>
+	/// <summary>Get all documents of the collection.</summary>
+	/// <returns>All documents of the collection.</returns>
 	public List<Document> GetDocuments()
 	{
 		if (!HasTransactions) return Documents;

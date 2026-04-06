@@ -3,7 +3,7 @@ namespace AllaDb;
 /// <summary>Configuration for the database.</summary>
 public class AllaOptions(string datasource)
 {
-	/// <summary>The database file. The special value :memory: will cause exceptions when persisting the database.</summary>
+	/// <summary>Path to the database file. The special :memory: value will keep data in-memory and throw exceptions when attempting to persist.</summary>
 	public string Datasource { get; set; } = datasource;
 
 	/// <summary>If true, saves the database using line breaks and indents.</summary>

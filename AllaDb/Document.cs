@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace AllaDb;
 
-/// <summary>A collection of key-value pairs identified by a unique GUID.</summary>
+/// <summary>A collection of key/value pairs identified by a unique GUID.</summary>
 public class Document
 {
 	/// <summary>Unique identifier of this document.</summary>
@@ -14,13 +14,18 @@ public class Document
 	[JsonInclude]
 	internal Dictionary<string, object?> Fields { get; set; } = [];
 
-	/// <summary>Exposes the enumerator of the underlying dictionary of key-value pairs.</summary>
+	/// <summary>Exposes the enumerator of the underlying dictionary of key/value pairs.</summary>
 	public IEnumerator GetEnumerator() => GetFields().GetEnumerator();
 
+	// / <summary>Determines whether the document contains the specified key.</summary>
+	
 	/// <summary>Determines whether the document contains the specified key.</summary>
+	/// <param name="key">The key to locate in the fields.</param>
+	/// <returns>true if the fields contains a value with the specified key; otherwise, false.</returns>
 	public bool ContainsKey(string key) => GetFields().ContainsKey(key);
 
-	/// <summary>Removes the value with the specified key from the document.</summary>
+	/// <summary>Removes the value with the specified key from the fields.</summary>
+	/// <param name="key">The key of the field to remove.</param>
 	public void Remove(string key)
 	{
 		if (!Collection!.HasTransactions)
@@ -46,6 +51,9 @@ public class Document
 	}
 
 	/// <summary>Gets the value associated with the specified key.</summary>
+	/// <param name="key">The key of the value to get.</param>
+	/// <param name="value">When this method returns, contains the value associated with the specified key, if the key is found; otherwise, the default vale for the type of the value parameter. This parameter is passed uninitialized.</param>
+	/// <returns>true if the fields contain a value with the specified key; otherwise, false.</returns>
 	public bool TryGetValue<T>(string key, out T? value)
 	{
 		bool doesContainKey = ContainsKey(key);
@@ -57,7 +65,9 @@ public class Document
 		return doesContainKey;
 	}
 
-	/// <summary>Adds a key-value pair to the document if the key does not already exist, or updates a key-value pair in the document if the key already exists.</summary>
+	/// <summary>Adds a field to the document if the key does not already exist, or updates a field in the document if the key already exists.</summary>
+	/// <param name="key">The key to be added or whose value should be updated.</param>
+	/// <param name="value">The value to be added for an absent key or a new value for an existing key.</param>
 	public void AddOrUpdate(string key, object? value)
 	{
 		if (!Collection!.HasTransactions)
@@ -72,7 +82,8 @@ public class Document
 		));
 	}
 
-	/// <summary>Returns all fields in this document.</summary>
+	/// <summary>Get all fields of the document.</summary>
+	/// <returns>All fields of the document.</returns>
 	public Dictionary<string, object?> GetFields()
 	{
 		if (!Collection!.HasTransactions) return Fields;

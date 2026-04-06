@@ -8,11 +8,11 @@ public class CollectionRemoveTests : TestsBase
 		Collection collection = CreateTestCollection();
 		collection.Add(CreateTestField());
 
-		Assert.That(collection.Count, Is.EqualTo(1));
+		Assert.That(collection.GetDocuments(), Has.Count.EqualTo(1));
 
 		collection.Clear();
 
-		Assert.That(collection.Count, Is.EqualTo(0));
+		Assert.That(collection.GetDocuments(), Is.Empty);
 	}
 
 	[Test]
@@ -26,7 +26,7 @@ public class CollectionRemoveTests : TestsBase
 		using (Assert.EnterMultipleScope())
 		{
 			Assert.That(collection.HasTransactions, Is.True);
-			Assert.That(collection.Count, Is.EqualTo(1));
+			Assert.That(collection.GetDocuments(), Has.Count.EqualTo(1));
 		}
 
 		collection.Clear();
@@ -34,7 +34,7 @@ public class CollectionRemoveTests : TestsBase
 		using (Assert.EnterMultipleScope())
 		{
 			Assert.That(collection.HasTransactions, Is.True);
-			Assert.That(collection.Count, Is.EqualTo(0));
+			Assert.That(collection.GetDocuments(), Is.Empty);
 		}
 
 		transaction.Commit().Dispose();
@@ -42,7 +42,7 @@ public class CollectionRemoveTests : TestsBase
 		using (Assert.EnterMultipleScope())
 		{
 			Assert.That(collection.HasTransactions, Is.False);
-			Assert.That(collection.Count, Is.EqualTo(0));
+			Assert.That(collection.GetDocuments(), Is.Empty);
 		}
 	}
 
@@ -57,7 +57,7 @@ public class CollectionRemoveTests : TestsBase
 		using (Assert.EnterMultipleScope())
 		{
 			Assert.That(collection.HasTransactions, Is.True);
-			Assert.That(collection.Count, Is.EqualTo(1));
+			Assert.That(collection.GetDocuments(), Has.Count.EqualTo(1));
 		}
 
 		collection.Clear();
@@ -65,7 +65,7 @@ public class CollectionRemoveTests : TestsBase
 		using (Assert.EnterMultipleScope())
 		{
 			Assert.That(collection.HasTransactions, Is.True);
-			Assert.That(collection.Count, Is.EqualTo(0));
+			Assert.That(collection.GetDocuments(), Is.Empty);
 		}
 
 		transaction.Rollback().Dispose();
@@ -73,7 +73,7 @@ public class CollectionRemoveTests : TestsBase
 		using (Assert.EnterMultipleScope())
 		{
 			Assert.That(collection.HasTransactions, Is.False);
-			Assert.That(collection.Count, Is.EqualTo(1));
+			Assert.That(collection.GetDocuments(), Has.Count.EqualTo(1));
 		}
 	}
 }
