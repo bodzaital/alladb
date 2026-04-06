@@ -34,7 +34,7 @@ public class AllaOptions(string datasource)
 		};
 
 		if (settings.TryGetValue("Pretty Print", out string? isPrettyPrint)) options.PrettyPrint = bool.Parse(isPrettyPrint);
-		if (settings.TryGetValue("Enum Strings", out string? isEnumStrings)) options.PrettyPrint = bool.Parse(isEnumStrings);
+		if (settings.TryGetValue("Enum Strings", out string? isEnumStrings)) options.EnumStrings = bool.Parse(isEnumStrings);
 
 		return options;
 	}
