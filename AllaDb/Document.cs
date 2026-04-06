@@ -72,7 +72,8 @@ public class Document
 		));
 	}
 
-	private Dictionary<string, object?> GetFields()
+	/// <summary>Returns all fields in this document.</summary>
+	public Dictionary<string, object?> GetFields()
 	{
 		if (!Collection!.HasTransactions) return Fields;
 

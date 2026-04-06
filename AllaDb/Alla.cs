@@ -59,6 +59,12 @@ public class Alla
 		return collection;
 	}
 
+	/// <summary>Returns all collections in this database.</summary>
+	public List<Collection> GetCollections()
+	{
+		return Collections;
+	}
+
 	/// <summary>Serializes the database based on the connection string and the serializer. Throws an exception for in-memory databases.</summary>
 	public void Persist()
 	{

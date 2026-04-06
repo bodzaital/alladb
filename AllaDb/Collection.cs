@@ -122,7 +122,8 @@ public class Collection
 		return transaction;
 	}
 
-	private List<Document> GetDocuments()
+	/// <summary>Returns all documents in this collection.</summary>
+	public List<Document> GetDocuments()
 	{
 		if (!HasTransactions) return Documents;
 
