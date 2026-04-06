@@ -1,39 +1,57 @@
-Rework:
+# AllaDb
 
-Alla : IEnumerable
-- constructor(AllaOptions options)
-- DropDatabase()
-- DropCollection(string name)
-- Persist()
-- GetEnumerator()
-- GetCollection(string name)
+*A Limited, Lightweight Application DB*
 
-Collection : IEnumerable
-- Clear()
-- Add(Document document)
-- Remove(Document document)
-- RemoveAll(Predicate<Document> predicate) ???
-- CreateTransaction()
-- GetEnumerator()
+A very simple document "database" written in C# and serializing to JSON by default.
 
-Transaction : IDisposable
-- Dispose()
-- MarkForCommit()
-- MarkForDelete()
+## Quick Start
 
-Document : IEnumerable
-- ContainsKey(string key)
-- Remove(string key)
-- TryGetValue<T>(string key, out T? value)
-- AddOrUpdate(string key, object? value)
-- GetEnumerator()
+Create a new database using a connection string:
 
-AllaOptions
-- constructor(string datasource, bool prettyPrint, bool enumStrings, PartitionOptions partitionOptions)
-- static FromConnectionString(string connectionString)
+```c#
+using AllaDb;
 
-PartitionOptions(PartitionBy Strategy, int Size, int? BatchSize)
+string connectionString = "Data Source = database.json";
+Alla db = new(AllaOptions.FromConnectionString(connectionString));
+```
 
-enum PartitionBy
-- Documents
-- Partitions
+Grab a reference to a collection:
+
+```c#
+Collection myCollection = db.GetCollection("my_collection");
+```
+
+Create documents in the collection:
+
+```c#
+Document firstDocument = myCollection.Add(new()
+{
+	{ "key1", "value1" },
+	{ "key2", "value2" },
+});
+```
+
+Document fields are backed by a dictionary of string key, nullable object value field. Retrieving data requires to know the type of the value:
+
+```c#
+string value = firstDocument.GetField<string>("key1");
+
+bool hasField = firstDocument.TryGetField<string>("key2", out string? value);
+```
+
+Transactions are implemented with the disposable interface. The default transaction resolution is to commit. More than one transactions can be opened.
+
+```c#
+using (Transaction transaction1 = myCollection.CreateTransaction())
+{
+	firstDocument.Remove("key1");
+
+	Transaction transaction2 = myCollection.CreateTransaction();
+	
+	myCollection.Remove(firstDocument);
+
+	transaction2.Rollback().Dispose();
+
+	transaction1.Commit();
+}
+```
