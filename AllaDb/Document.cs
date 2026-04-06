@@ -1,103 +1,122 @@
-using System.Collections.ObjectModel;
+using System.Collections;
 using System.Text.Json.Serialization;
 
 namespace AllaDb;
 
-/// <summary>Represents a set of fields.</summary>
-public class Document(Dictionary<string, object?> fields)
+/// <summary>A collection of key/value pairs identified by a unique GUID.</summary>
+public class Document
 {
+	/// <summary>Unique identifier of this document.</summary>
+	public string Id { get; set; } = Guid.NewGuid().ToString();
+
 	internal Collection? Collection { get; set; }
 
-	/// <summary>Gets the unique identifier of this <see cref="Document"/>.</summary>
 	[JsonInclude]
-	public string Id { get; internal set; } = Guid.NewGuid().ToString();
+	internal Dictionary<string, object?> Fields { get; set; } = [];
 
-	[JsonInclude]
-	internal Dictionary<string, object?> Fields { get; set; } = fields;
+	/// <summary>Exposes the enumerator of the underlying dictionary of key/value pairs.</summary>
+	public IEnumerator GetEnumerator() => GetFields().GetEnumerator();
 
-	/// <summary>Determines whether the <see cref="Document"/> contains the specified field.</summary>
-	/// <param name="key">The key of the field to locate in the <see cref="Document"/>.</param>
-	/// <returns><see cref="true"/> if the <see cref="Document"/> contains a field with the specified key; otherwise, <see cref="false"/>.</returns>
-	public bool HasField(string key) => GetFields().ContainsKey(key);
+	// / <summary>Determines whether the document contains the specified key.</summary>
+	
+	/// <summary>Determines whether the document contains the specified key.</summary>
+	/// <param name="key">The key to locate in the fields.</param>
+	/// <returns>true if the fields contains a value with the specified key; otherwise, false.</returns>
+	public bool ContainsKey(string key) => GetFields().ContainsKey(key);
 
-	/// <summary>Gets the value associated with the specified field.</summary>
-	/// <typeparam name="T">Target type of the value associated with the specified field.</typeparam>
-	/// <param name="key">The key of the field to get.</param>
-	/// <returns>The value associated with the specified field. If the specified field is not found, throws an <see cref="ArgumentOutOfRangeException"/>.</returns>
-	public T? GetField<T>(string key)
+	/// <summary>Removes the value with the specified key from the fields.</summary>
+	/// <param name="key">The key of the field to remove.</param>
+	public void Remove(string key)
 	{
-		if (!HasField(key)) throw new ArgumentOutOfRangeException(nameof(key), key);
-		return (T?)Convert.ChangeType(GetFields()[key], typeof(T));
-	}
-
-	/// <summary>Sets the value associated with the specified field.</summary>
-	/// <param name="key">The key of the field to set.</param>
-	/// <param name="value">Value of the field to set. The value can be <see cref="null"/>.</param>
-	public void SetField(string key, object? value)
-	{
-		Collection!.ThrowIfRequiredTransactionMissing();
-		Collection!.Constraints.ForEach((x) => x.ValidateFieldWrite(key, value));
-
-		if (Collection!.OpenTransaction is null)
+		if (!Collection!.HasTransactions)
 		{
-			if (!Fields.TryAdd(key, value)) Fields[key] = value;
+			Fields.Remove(key);
 			return;
 		}
 
-		Collection.OpenTransaction.AddFieldWrite(Id, key, value);
+		Collection.Transactions.Last().Changes.Add(new(
+			Transaction.Action.Delete,
+			FieldChange: new(Id, key, null)
+		));
 	}
 
-	/// <summary>Deletes the field with the specified key from the <see cref="Document"/>. If the specified field is not found, throws an <see cref="ArgumentOutOfRangeException"/>.</summary>
-	/// <param name="key">The key of the field to delete.</param>
-	public void DeleteField(string key)
+	/// <summary>Gets the value associated with the specified key.</summary>
+	public T? GetValue<T>(string key)
 	{
-		Collection!.ThrowIfRequiredTransactionMissing();
-		Collection!.Constraints.ForEach((x) => x.ValidateFieldDelete(key));
-		
-		if (Collection!.OpenTransaction is null)
-		{
-			bool couldRemove = Fields.Remove(key);
-			if (!couldRemove) throw new ArgumentOutOfRangeException(nameof(key), key);
-			return;
-		}
+		bool doesContainKey = ContainsKey(key);
 
-		Collection.OpenTransaction.AddFieldDeletion(Id, key);
+		return doesContainKey
+			? (T?)Convert.ChangeType(GetFields()[key], typeof(T))
+			: default;
 	}
 
-	/// <summary>Gets the value associated with the specified field.</summary>
-	/// <typeparam name="T">Target type of the value associated with the specified field.</typeparam>
-	/// <param name="key">The key of the field to get.</param>
-	/// <param name="value">When this method returns, contains the value associated with the specified field, if the key is found, otherwise, the default value for <typeparamref name="T"/>.</param>
-	/// <returns><see cref="true"/> if the <see cref="Document"/> contains a field with the specified key, otherwise, <see cref="false"/>.</returns>
-	public bool TryGetField<T>(string key, out T? value)
+	/// <summary>Gets the value associated with the specified key.</summary>
+	/// <param name="key">The key of the value to get.</param>
+	/// <param name="value">When this method returns, contains the value associated with the specified key, if the key is found; otherwise, the default vale for the type of the value parameter. This parameter is passed uninitialized.</param>
+	/// <returns>true if the fields contain a value with the specified key; otherwise, false.</returns>
+	public bool TryGetValue<T>(string key, out T? value)
 	{
-		bool hasField = HasField(key);
+		bool doesContainKey = ContainsKey(key);
 
-		value = hasField
-			? GetField<T>(key)
+		value = doesContainKey
+			? (T?)Convert.ChangeType(GetFields()[key], typeof(T))
 			: default;
 
-		return hasField;
+		return doesContainKey;
 	}
 
-	/// <summary>Returns a <see cref="ReadOnlyDictionary{string, object?}"/> of the fields of the <see cref="Document"/>.</summary>
-	/// <returns>A <see cref="ReadOnlyDictionary{string, object?}"/> that can be used to iterate over the fields of the <see cref="Document"/>.</returns>
-	public ReadOnlyDictionary<string, object?> GetFields()
+	/// <summary>Adds a field to the document if the key does not already exist, or updates a field in the document if the key already exists.</summary>
+	/// <param name="key">The key to be added or whose value should be updated.</param>
+	/// <param name="value">The value to be added for an absent key or a new value for an existing key.</param>
+	public void AddOrUpdate(string key, object? value)
 	{
-		if (Collection?.OpenTransaction is null) return new(Fields);
+		if (!Collection!.HasTransactions)
+		{
+			Fields[key] = value;
+			return;
+		}
 
-		List<Transaction.FieldChange> fieldDeletions = Collection.OpenTransaction.GetFieldChanges(Transaction.ChangeAction.Deleted);
-		List<Transaction.FieldChange> fieldWrites = Collection.OpenTransaction.GetFieldChanges(Transaction.ChangeAction.Written);
+		Collection.Transactions.Last().Changes.Add(new(
+			Transaction.Action.Write,
+			FieldChange: new(Id, key, value)
+		));
+	}
 
-		IEnumerable<KeyValuePair<string, object?>> unchangedFields = Fields
-			.Where((field) => !fieldWrites.Any((write) => write.Key == field.Key))
-			.Where((field) => !fieldDeletions.Any((deletion) => deletion.Key == field.Key));
-		
-		IEnumerable<KeyValuePair<string, object?>> writtenFields = fieldWrites
-			.Select((write) => new KeyValuePair<string, object?>(write.Key, write.Value));
-		
-		IEnumerable<KeyValuePair<string, object?>> txFields = [..unchangedFields, ..writtenFields];
-		
-		return new(txFields.ToDictionary());
+	/// <summary>Get all fields of the document.</summary>
+	/// <returns>All fields of the document.</returns>
+	public Dictionary<string, object?> GetFields()
+	{
+		if (!Collection!.HasTransactions) return Fields;
+
+		return Collection.Transactions.Aggregate(new Dictionary<string, object?>(Fields), ReduceTxFields);
+	}
+
+	private Dictionary<string, object?> ReduceTxFields(Dictionary<string, object?> accumulator, Transaction item)
+	{
+		// Get field changes from tx.
+		IEnumerable<Transaction.Change>? fieldChanges = item.Changes
+			.Where((x) => x.FieldChange is not null);
+
+		// Get the field writes from the tx.
+		IEnumerable<Transaction.FieldChange> txFieldWrites = fieldChanges
+			.Where((x) => x.Action == Transaction.Action.Write)
+			.Select((x) => x.FieldChange!);
+
+		// Get the field deletions from the tx.
+		IEnumerable<Transaction.FieldChange> txFieldDeletions = fieldChanges
+			.Where((x) => x.Action == Transaction.Action.Delete)
+			.Select((x) => x.FieldChange!);
+
+		// Get the unchanged fields from the accumulator (previously calculated changes).
+		IEnumerable<KeyValuePair<string, object?>>? unchanged = accumulator
+			.Where((x) => !txFieldWrites.Any((write) => write!.Key == x.Key))
+			.Where((x) => !txFieldDeletions.Any((write) => write!.Key == x.Key));
+
+		// Add the field writes.
+		IEnumerable<KeyValuePair<string, object?>>? txWrites = txFieldWrites
+			.Select((x) => new KeyValuePair<string, object?>(x!.Key, x!.Value));
+
+		// Return the newly accumulated value.
+		return unchanged.Union(txWrites).ToDictionary();
 	}
 }

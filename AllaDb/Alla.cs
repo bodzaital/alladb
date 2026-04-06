@@ -1,133 +1,116 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using AllaDb.Exceptions;
-using Microsoft.Extensions.Options;
 
 namespace AllaDb;
 
-public interface IAlla
+/// <summary>A lightweight, limited application database storing key-value pairs.</summary>
+public class Alla
 {
-	/// <summary>Removes all <see cref="Collection"/>s from the database.</summary>
-	void DropDatabase();
+	private readonly IAllaSerializer _serializer;
 
-	/// <summary>Removes a <see cref="Collection"/> from the database.</summary>
-	/// <param name="collectionName">Name of the <see cref="Collection"/> to remove.</param>
-	void DropCollection(string collectionName);
+	internal AllaOptions Options { get; set; }
 
-	/// <summary>Gets or creates a reference to a <see cref="Collection"/>.</summary>
-	/// <param name="collectionName">Name of the <see cref="Collection"/> to get.</param>
-	/// <returns>The associated <see cref="Collection"/>.</returns>
-	Collection GetCollection(string collectionName);
-	
-	/// <summary>Returns a <see cref="ReadOnlyCollection{Collection}"/> of the <see cref="Collection"/>s of the database.</summary>
-	/// <returns>A <see cref="ReadOnlyCollection{Collection}"/> that can be used to iterate over the <see cref="Collection"/>s of the database.</returns>
-	ReadOnlyCollection<Collection> GetCollections();
+	internal JsonSerializerOptions SerializerOptions { get; set; }
 
-	/// <summary>Serializes the database to the data source file. If the database is in-memory only, throws <see cref="InvalidOperationException"/>. If a <see cref="Collection"/> has an open <see cref="Transaction"/>, throws <see cref="UnresolvedTransactionException"/>.</summary>
-	void Persist();
-}
+	internal List<Collection> Collections { get; set; } = [];
 
-public class Alla : IAlla
-{
-	private readonly AllaOptions _options;
-
-	private readonly JsonSerializerOptions _serializerOptions;
-
-	[JsonInclude]
-	private readonly List<Collection> Collections = [];
-
-	/// <summary>Creates a new instance of <see cref="Alla"/> using the specified configuration of <see cref="AllaOptions"/>.</summary>
-	/// <param name="options">A configuration of <see cref="AllaOptions"/> from the DI container.</param>
-	public Alla(IOptions<AllaOptions> options)
+	/// <summary>Creates a new instance of Alla Db.</summary>
+	/// <param name="options">The instance of options to configure the database.</param>
+	/// <param name="serializer">The serializer to use when persisting the database. If null, uses the default single-file serializer.</param>
+	public Alla(AllaOptions options, IAllaSerializer? serializer = null)
 	{
-		ArgumentNullException.ThrowIfNull(options);
-		_options = options.Value;
+		Options = options;
+		_serializer = serializer ?? new DefaultSerializer();
 
-		_serializerOptions = new()
+		SerializerOptions = new()
 		{
-			WriteIndented = _options.IsPrettyPrint,
+			WriteIndented = Options.PrettyPrint,
 		};
 
-		if (_options.IsEnumStrings)
+		if (Options.EnumStrings)
 		{
-			_serializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+			SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 		}
 
 		EnsureCreated();
 		Collections = Load();
 	}
 
-	/// <summary>Creates a new instance of <see cref="Alla"/> using the specified instance of <see cref="AllaOptions"/>.</summary>
-	/// <param name="options">An instance of <see cref="AllaOptions"/>.</param>
-	public Alla(AllaOptions options)
-	{
-		_options = options;
+	/// <summary>Exposes the enumerator of the underlying list of collections.</summary>
+	/// <returns>An enumerator for the list of collections.</returns>
+	public IEnumerator GetEnumerator() => Collections.GetEnumerator();
 
-		_serializerOptions = new()
-		{
-			WriteIndented = _options.IsPrettyPrint,
-		};
-
-		if (_options.IsEnumStrings)
-		{
-			_serializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
-		}
-
-		EnsureCreated();
-		Collections = Load();
-	}
-
-	/// <inheritdoc cref="IAlla.DropDatabase">
+	/// <summary>Removes all collections from the database.</summary>
 	public void DropDatabase() => Collections.Clear();
 
-	/// <inheritdoc cref="IAlla.DropCollection(string)"/>
-	public void DropCollection(string collectionName) => Collections
-		.RemoveAll((x) => x.Name == collectionName);
+	/// <summary>Removes the collection whose name matches the specified name.</summary>
+	/// <param name="name">The name of the collection to remove.</param>
+	public void DropCollection(string name) => Collections.RemoveAll((x) => x.Name == name);
 
-	/// <inheritdoc cref="IAlla.GetCollection(string)"/>
-	public Collection GetCollection(string collectionName)
+	/// <summary>Creates a collection in the database if the name does not already exist, or gets the collection in the database if the name already exists.</summary>
+	/// <param name="name">The name of the collection to be created or whose collection should be retrieved.</param>
+	/// <returns>The collection associated with the specified name.</returns>
+	public Collection GetCollection(string name)
 	{
-		Collection? collection = Collections.Find((x) => x.Name == collectionName);
-
+		Collection? collection = Collections.Find((x) => x.Name == name);
+		
 		if (collection is null)
 		{
-			collection = new(_options, collectionName);
+			collection = new() { Name = name };
 			Collections.Add(collection);
 		}
-
+		
 		return collection;
 	}
 
-	/// <inheritdoc cref="IAlla.GetCollections"/>
-	public ReadOnlyCollection<Collection> GetCollections() => new(Collections);
-
-	/// <inheritdoc cref="IAlla.Persist"/>
-	public void Persist()
+	/// <summary>Get all collections in the database.</summary>
+	/// <returns>All collections in the database.</returns>
+	public List<Collection> GetCollections()
 	{
-		if (_options.DataSource == ":memory:") throw new InvalidOperationException(
-			"Database cannot be persisted because it is in-memory only."
-		);
-
-		if (Collections.Any((x) => x.OpenTransaction is not null)) throw new UnresolvedTransactionException(
-			"The transaction must be resolved before persisting the collection."
-		);
-		
-		File.WriteAllText(
-			_options.DataSource,
-			JsonSerializer.Serialize(
-				Collections.Where((x) => x.Documents.Count > 0),
-				_serializerOptions
-			)
-		);
+		return Collections;
 	}
 
-	private List<Collection> Load() => JsonSerializer.Deserialize<List<Collection>>(File.ReadAllText(_options.DataSource))
-		?? throw new IllegalDeserializationException();
+	/// <summary>Serializes the database based on the connection string and the serializer. Throws an exception for in-memory databases.</summary>
+	public void Persist()
+	{
+		if (Options.Datasource == ":memory:") 
+		{
+			throw new Exception("Database cannot be persisted as it is in-memory only.");
+		}
+
+		bool hasOpenTransaction = Collections.Any((x) => x.Transactions.Count > 0);
+
+		if (hasOpenTransaction)
+		{
+			throw new Exception("Any open transactions must be resolved before persisting the collection.");
+		}
+
+		_serializer.Persist(this);
+	}
 
 	private void EnsureCreated()
 	{
-		if (File.Exists(_options.DataSource)) return;
-		Persist();
+		if (Options.Datasource == ":memory:") return;
+		
+		_serializer.EnsureCreated(this);
+	}
+
+	private List<Collection> Load()
+	{
+		if (Options.Datasource == ":memory:") return [];
+
+		List<Collection> loaded = _serializer.Load(this);
+		loaded.ForEach(SetCollectionReference);
+
+		return loaded;
+	}
+
+	private void SetCollectionReference(Collection collection)
+	{
+		collection.Documents.ForEach((document) =>
+		{
+			document.Collection = collection;
+		});
 	}
 }

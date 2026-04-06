@@ -1,153 +1,155 @@
-using System.Collections.ObjectModel;
-using System.Runtime.Serialization;
+using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
-using AllaDb.Exceptions;
 
 namespace AllaDb;
 
-/// <summary>Represents a collection of <see cref="Document"/>s.</summary>
-public class Collection(AllaOptions options, string name)
+/// <summary>A collection of documents.</summary>
+public class Collection
 {
-	private readonly AllaOptions _options = options;
+	/// <summary>Unique name of this collection.</summary>
+	public required string Name { get; set; }
 
-	/// <summary>Gets the unique name of this <see cref="Collection"/>.</summary>
-	public string Name { get; set; } = name;
+	internal List<Transaction> Transactions = [];
+
+	/// <summary>Returns true if this collection has any unresolved transactions.</summary>
+	[JsonIgnore]
+	public bool HasTransactions { get => Transactions.Count > 0; }
 
 	[JsonInclude]
 	internal List<Document> Documents { get; set; } = [];
 
-	[JsonInclude]
-	internal List<IConstraint> Constraints { get; set; } = [];
+	/// <summary>Exposes the enumerator of the underlying list of documents.</summary>
+	public IEnumerator GetEnumerator() => GetDocuments().GetEnumerator();
 
-	internal Transaction? OpenTransaction { get; set; }
-
-	/// <summary>Method that is called when deserializing the database to set the associated <see cref="Collection"/> references in <see cref="Document"/>s and <see cref="Constraint"/>s.</summary>
-	[OnDeserialized]
-	public void OnDeserialized()
+	/// <summary>Removes all documents from the collection.</summary>
+	public void Clear()
 	{
-		Documents.ForEach((x) => x.Collection = this);
-		SetCollectionToConstraints();
+		if (!HasTransactions)
+		{
+			Documents.Clear();
+			return;
+		}
+
+		Documents.ForEach((document) => Transactions.Last().Changes.Add(new(
+			Transaction.Action.Delete,
+			DocumentChange: document
+		)));
 	}
 
-	#region Collections
-
-	/// <summary>Removes all <see cref="Document"/>s from the <see cref="Collection"/>.</summary>
-	public void Truncate()
+	/// <summary>Adds a new document with the specified fields to the end of the collection.</summary>
+	/// <param name="fields">The fields of a new document to be added to the end of the collection.</param>
+	/// <returns>The new document in the collection.</returns>
+	public Document Add(Dictionary<string, object?> fields)
 	{
-		ThrowIfRequiredTransactionMissing();
-
-		if (OpenTransaction is not null) GetDocuments().ToList().ForEach(OpenTransaction.AddDocumentDeletion);
-		else Documents.Clear();
-	}
-
-	#endregion
-
-	#region Constraints
-
-	/// <summary>Assigns a range of <see cref="IConstraint"/>s to the <see cref="Collection"/>.</summary>
-	/// <param name="constraints">The range of <see cref="IConstraint"/>s whose elements should be assigned to the <see cref="Collection"/>.</param>
-	/// <returns>The created constraints.</returns>
-	public void CreateConstraints(params IEnumerable<IConstraint> constraints)
-	{
-		Constraints.AddRange(constraints);
-		SetCollectionToConstraints();
-	}
-
-	/// <summary>Deletes the <see cref="IConstraint"/> with the specified Id from the <see cref="Collection"/>. If the specified <see cref="IConstraint"/> is not found, throws an <see cref="ArgumentOutOfRangeException"/>.</summary>
-	/// <param name="constraintId">The Id of the <see cref="IConstraint"/> to delete.</param>
-	public void DeleteConstraint(string constraintId)
-	{
-		IConstraint constraint = Constraints.FirstOrDefault((x) => x.Id == constraintId)
-			?? throw new ArgumentOutOfRangeException(nameof(constraintId), constraintId);
-
-		Constraints.Remove(constraint);
-	}
-
-	/// <summary>Returns a <see cref="ReadOnlyCollection{IConstraint}"/> of the <see cref="IConstraint"/>s of the <see cref="Collection"/>.</summary>
-	/// <returns>A <see cref="ReadOnlyCollection{IConstraint}"/> that can be used to iterate over the <see cref="IConstraint"/>s of the <see cref="Collection"/>.</returns>
-	public ReadOnlyCollection<IConstraint> GetConstraints() => new(Constraints);
-
-	#endregion
-
-	#region Documents
-
-	/// <summary>Adds a <see cref="Document"/> to the <see cref="Collection"/>.</summary>
-	/// <param name="fields">The <see cref="Dictionary{string, object?}"/> whose elements are copied to the new <see cref="Document"/>.</param>
-	/// <returns>The created <see cref="Document"/>.</returns>
-	public Document CreateDocument(Dictionary<string, object?> fields)
-	{
-		ThrowIfRequiredTransactionMissing();
-		Constraints.ForEach((x) => x.ValidateNewDocument(fields));
+		Document document = new()
+		{
+			Fields = fields,
+			Collection = this,
+		};
 		
-		Document document = new(fields) { Collection = this };
-		
-		if (OpenTransaction is not null) OpenTransaction.AddDocumentWrite(document);
-		else Documents.Add(document);
-		
+		if (!HasTransactions)
+		{
+			Documents.Add(document);
+		}
+		else
+		{
+			Transactions.Last().Changes.Add(new(
+				Transaction.Action.Write,
+				DocumentChange: document
+			));
+		}
+
 		return document;
 	}
 
-	/// <summary>Deletes the <see cref="Document"/> with the specified Id from the <see cref="Collection"/>. If the specified <see cref="Document"/> is not found, throws an <see cref="ArgumentOutOfRangeException"/>.</summary>
-	/// <param name="documentId">The Id of the <see cref="Document"/> to delete.</param>
-	public void DeleteDocument(string documentId)
+	/// <summary>Adds the specified list of fields to the end of the collection.</summary>
+	/// <param name="fields">The list of fields that should be added to the end of the collection.</param>
+	/// <returns>The list of new documents in the collection.</returns>
+	public List<Document> AddRange(IEnumerable<Dictionary<string, object?>> fields)
 	{
-		ThrowIfRequiredTransactionMissing();
-
-		Document document = GetDocuments().FirstOrDefault((x) => x.Id == documentId)
-			?? throw new ArgumentOutOfRangeException(nameof(documentId), documentId);
-
-		if (OpenTransaction is not null) OpenTransaction.AddDocumentDeletion(document);
-		else Documents.Remove(document);
+		return [.. fields.Select(Add)];
 	}
 
-	/// <summary>Gets the <see cref="Document"/> associated with the specified Id.</summary>
-	/// <param name="documentId">The Id of the <see cref="Document"/> to get.</param>
-	/// <returns>The <see cref="Document"/> associated with the specified Id. If the specified Id is not found, throws an <see cref="ArgumentOutOfRangeException"/>.</returns>
-	public Document GetDocument(string documentId) => GetDocuments().FirstOrDefault((x) => x.Id == documentId)
-		?? throw new ArgumentOutOfRangeException(nameof(documentId), documentId);
-
-	/// <summary>Returns a <see cref="ReadOnlyCollection{Document}"/> of the <see cref="Document"/>s of the <see cref="Collection"/>.</summary>
-	/// <returns>A <see cref="ReadOnlyCollection{Document}"/> that can be used to iterate over the <see cref="Document"/>s of the <see cref="Collection"/>.</returns>
-	public ReadOnlyCollection<Document> GetDocuments()
+	/// <summary>Removes the specific document from the collection.</summary>
+	/// <param name="document">The document to remove from the collection.</param>
+	public void Remove(Document document)
 	{
-		if (OpenTransaction is null) return new(Documents);
-
-		IEnumerable<Document> notDeletedDocuments = Documents.Where((live) =>
+		if (!HasTransactions)
 		{
-			return OpenTransaction.Documents(Transaction.ChangeAction.Deleted).Find((inTx) => inTx.Id == live.Id) is null;
-		});
+			Documents.Remove(document);
+			return;
+		}
 
-		return new([..notDeletedDocuments, ..OpenTransaction.Documents(Transaction.ChangeAction.Written)]);
+		Transactions.Last().Changes.Add(new(
+			Transaction.Action.Delete,
+			DocumentChange: document
+		));
 	}
 
-	#endregion
+	/// <summary>Removes all document that match the condition defined by the specified delegate.</summary>
+	/// <param name="predicate">The function delegate that defines the condition of the documents to remove.</param>
+	public void RemoveAll(Func<Document, bool> predicate)
+	{
+		if (!HasTransactions)
+		{
+			Documents.RemoveAll(new(predicate));
+			return;
+		}
 
-	#region Transactions
+		Documents.Where(predicate).ToList().ForEach((document) => Transactions.Last().Changes.Add(new(
+			Transaction.Action.Delete,
+			DocumentChange: document
+		)));
+	}
 
-	/// <summary>Creates a <see cref="Transaction"/> on the <see cref="Collection"/>.</summary>
-	/// <returns>The created <see cref="Transaction"/>. If the <see cref="Collection"/> already has a <see cref="Transaction"/> in-progress, throws <see cref="UnresolvedTransactionException"/>.</returns>
+	/// <summary>Gets the document associated with the specified ID.</summary>
+	/// <param name="id">The ID of the document to get.</param>
+	/// <returns>The document if the collection contains it by ID; otherwise, null.</returns>
+	public Document? GetDocument(string id)
+	{
+		return GetDocuments().Find((x) => x.Id == id);
+	}
+
+	/// <summary>Gets the document associated with the specified ID.</summary>
+	/// <param name="id">The ID of the document to get.</param>
+	/// <param name="document">When this method returns, contains the document associated with the specified ID, if the ID is found; otherwise, null. This parameter is passed uninitialized.</param>
+	/// <returns>true if the collection contains a document with the specified ID; otherwise, false.</returns>
+	public bool TryGetDocument(string id, [NotNullWhen(true)] out Document? document)
+	{
+		document = GetDocuments().Find((x) => x.Id == id);
+		return document is not null;
+	}
+
+	/// <summary>Adds a new transaction over this collection to the end of the transaction stack.</summary>
+	/// <returns>The new transaction over this collection.</returns>
 	public Transaction CreateTransaction()
 	{
-		if (OpenTransaction is not null) throw new UnresolvedTransactionException(
-			"Resolve the transaction before opening a new transaction."
-		);
-		
-		OpenTransaction = new(this);
-		return OpenTransaction;
+		Transaction transaction = new(this);
+		Transactions.Add(transaction);
+		return transaction;
 	}
 
-	#endregion
-
-	internal void ThrowIfRequiredTransactionMissing()
+	/// <summary>Get all documents of the collection.</summary>
+	/// <returns>All documents of the collection.</returns>
+	public List<Document> GetDocuments()
 	{
-		if (!_options.AreTransactionsRequired || OpenTransaction is not null) return;
+		if (!HasTransactions) return Documents;
 
-		throw new InvalidOperationException(
-			"Transactions are required."
-		);
+		return Transactions.Aggregate(new List<Document>(Documents), ReduceTxDocuments);
 	}
 
-	private void SetCollectionToConstraints() => Constraints
-		.Select((x) => (ConstraintBase)x).ToList()
-		.ForEach((x) => x.Collection = this);
+	private List<Document> ReduceTxDocuments(List<Document> accumulator, Transaction item)
+	{
+		IEnumerable<Document> unchanged = accumulator.Where((doc) => !item.Changes
+			.Any((change) => change.DocumentChange?.Id == doc.Id)
+		);
+
+		IEnumerable<Document> writtenDocuments = item.Changes
+			.Where((x) => x.Action == Transaction.Action.Write)
+			.Where((x) => x.DocumentChange is not null)
+			.Select((x) => x.DocumentChange!);
+
+		return [.. unchanged.Union(writtenDocuments)];
+	}
 }
