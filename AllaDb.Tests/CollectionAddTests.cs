@@ -1,6 +1,6 @@
 namespace AllaDb.Tests;
 
-public class CollectionAddTests : CollectionTests
+public class CollectionAddTests : TestsBase
 {
 	[Test]
 	public void CanAdd_WithNoTransaction()

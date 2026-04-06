@@ -1,6 +1,6 @@
 namespace AllaDb.Tests;
 
-public class CollectionClearTests : CollectionTests
+public class CollectionClearTests : TestsBase
 {
 	[Test]
 	public void CanClear_WithNoTransaction()

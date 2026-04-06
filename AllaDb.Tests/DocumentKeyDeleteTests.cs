@@ -1,6 +1,6 @@
 ﻿namespace AllaDb.Tests;
 
-public class DocumentKeyDeleteTests : DocumentTests
+public class DocumentKeyDeleteTests : TestsBase
 {
     [Test]
     public void CanDeleteKey_WithNoTransaction_WithTryGetValue()

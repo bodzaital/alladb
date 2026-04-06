@@ -1,6 +1,6 @@
 namespace AllaDb.Tests;
 
-public class CollectionRemoveAllTests : CollectionTests
+public class CollectionRemoveAllTests : TestsBase
 {
 	[Test]
 	public void CanRemoveAll_WithNoTransaction()

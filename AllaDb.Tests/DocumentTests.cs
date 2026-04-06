@@ -1,6 +1,6 @@
 namespace AllaDb.Tests;
 
-public abstract class DocumentTests
+public abstract class TestsBase
 {
     protected static Collection CreateTestCollection() => new()
     {

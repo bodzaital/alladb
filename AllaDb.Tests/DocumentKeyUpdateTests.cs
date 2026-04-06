@@ -1,6 +1,6 @@
 ﻿namespace AllaDb.Tests;
 
-public class DocumentKeyUpdateTests : DocumentTests
+public class DocumentKeyUpdateTests : TestsBase
 {
     [Test]
     public void CanUpdateKey_WithNoTransaction_WithTryGetValue()
