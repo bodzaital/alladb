@@ -39,6 +39,8 @@ public class Document
 	}
 
 	/// <summary>Gets the value associated with the specified key.</summary>
+	/// <param name="key">The key of the value to get.</param>
+	/// <returns>The value associated with the specified key, if the key is found; otherwise, the default value for the type of the return value.</returns>
 	public T? GetValue<T>(string key)
 	{
 		bool doesContainKey = ContainsKey(key);

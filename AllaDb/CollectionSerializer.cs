@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace AllaDb;
 
-/// <summary>A serializer that partitions by collections.</summary>
+/// <summary>A serializer that partitions by collections. The database is serialized into "database.[collection].json" files in the data source directory.</summary>
 public class CollectionSerializer : IAllaSerializer
 {
 	private static readonly string DatasourceFile = "database.[collection].json";

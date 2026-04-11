@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace AllaDb;
 
-/// <summary>The default, single-file serializer used by the database when persisting.</summary>
+/// <summary>The default, single-file serializer used by the database when persisting. The database is serialized into a "database.json" file in the data source directory.</summary>
 public class DefaultSerializer : IAllaSerializer
 {
 	private static readonly string DatasourceFile = "database.json";
