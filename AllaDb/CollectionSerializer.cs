@@ -5,6 +5,8 @@ namespace AllaDb;
 /// <summary>A serializer that partitions by collections.</summary>
 public class CollectionSerializer : IAllaSerializer
 {
+	private static readonly string DatasourceFile = "database.[collection].json";
+
 	private readonly List<string> _loadedCollectionNames = [];
 
 	/// <inheritdoc />
@@ -16,7 +18,7 @@ public class CollectionSerializer : IAllaSerializer
 	/// <inheritdoc />
 	public List<Collection> Load(Alla db)
 	{
-		List<string> datasourceFileNames = GetDatasourceFileNames(db.Options.Datasource);
+		List<string> datasourceFileNames = GetDatasourceFileNames(GetFullDatasource(db.Options.Datasource));
 
 		if (datasourceFileNames.Count == 0) return [];
 
@@ -34,7 +36,7 @@ public class CollectionSerializer : IAllaSerializer
 
 		db.Collections.Where((x) => x.Documents.Count > 0).ToList()
 			.ForEach((collection) => File.WriteAllText(
-				db.Options.Datasource.Replace("[collection]", collection.Name),
+				GetFullDatasource(db.Options.Datasource).Replace("[collection]", collection.Name),
 				JsonSerializer.Serialize(
 					collection,
 					db.SerializerOptions
@@ -44,7 +46,7 @@ public class CollectionSerializer : IAllaSerializer
 
 	private void DeleteAnyRemovedCollectionFiles(Alla db)
 	{
-		List<string> datasourceFileNames = GetDatasourceFileNames(db.Options.Datasource);
+		List<string> datasourceFileNames = GetDatasourceFileNames(GetFullDatasource(db.Options.Datasource));
 
 		datasourceFileNames.ForEach((fileName) =>
 		{
@@ -84,4 +86,7 @@ public class CollectionSerializer : IAllaSerializer
 			.GetFiles(datasourceDirectory, datasourcePattern)
 		];
 	}
+
+	private static string GetFullDatasource(string datasource) =>
+		Path.Join(datasource, DatasourceFile);
 }

@@ -5,10 +5,12 @@ namespace AllaDb;
 /// <summary>The default, single-file serializer used by the database when persisting.</summary>
 public class DefaultSerializer : IAllaSerializer
 {
+	private static readonly string DatasourceFile = "database.json";
+
 	/// <inheritdoc />
 	public void EnsureCreated(Alla db)
 	{
-		if (File.Exists(db.Options.Datasource)) return;
+		if (File.Exists(GetFullDatasource(db.Options.Datasource))) return;
 
 		Persist(db);
 	}
@@ -17,7 +19,7 @@ public class DefaultSerializer : IAllaSerializer
 	public List<Collection> Load(Alla db)
 	{
 		return JsonSerializer.Deserialize<List<Collection>>(
-			File.ReadAllText(db.Options.Datasource) 
+			File.ReadAllText(GetFullDatasource(db.Options.Datasource)) 
 		) ?? throw new Exception("Failed to deserialize datasource.");
 	}
 
@@ -25,11 +27,14 @@ public class DefaultSerializer : IAllaSerializer
 	public void Persist(Alla db)
 	{
 		File.WriteAllText(
-			db.Options.Datasource,
+			GetFullDatasource(db.Options.Datasource),
 			JsonSerializer.Serialize(
 				db.Collections.Where((x) => x.Documents.Count > 0),
 				db.SerializerOptions
 			)
 		);
 	}
+
+	private static string GetFullDatasource(string datasource) =>
+		Path.Join(datasource, DatasourceFile);
 }

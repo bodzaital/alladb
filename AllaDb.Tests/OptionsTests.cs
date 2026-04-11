@@ -2,22 +2,22 @@ namespace AllaDb.Tests;
 
 public class OptionsTests
 {
-	[TestCase("Data Source = database.json")]
-	[TestCase("Data Source= database.json")]
-	[TestCase("Data Source =database.json")]
+	[TestCase("Data Source = /test/datasource/folder")]
+	[TestCase("Data Source= /test/datasource/folder")]
+	[TestCase("Data Source =/test/datasource/folder")]
 	public void CanParse_WithOnlyDatasource(string connectionString)
 	{
 		AllaOptions options = AllaOptions.FromConnectionString(connectionString);
 
-		Assert.That(options.Datasource, Is.EqualTo("database.json"));
+		Assert.That(options.Datasource, Is.EqualTo("/test/datasource/folder"));
 	}
 
-	[TestCase("DataSource = database.json")]
-	[TestCase("data source = database.json")]
-	[TestCase("datasource = database.json")]
-	[TestCase("dataSource = database.json")]
-	[TestCase("Datasource = database.json")]
-	[TestCase("Data source = database.json")]
+	[TestCase("DataSource = /test/datasource/folder")]
+	[TestCase("data source = /test/datasource/folder")]
+	[TestCase("datasource = /test/datasource/folder")]
+	[TestCase("dataSource = /test/datasource/folder")]
+	[TestCase("Datasource = /test/datasource/folder")]
+	[TestCase("Data source = /test/datasource/folder")]
 	public void Malformed_WithOnlyDatasource(string connectionString)
 	{
 		Assert.Throws<Exception>(() =>
@@ -26,9 +26,9 @@ public class OptionsTests
 		});
 	}
 
-	[TestCase("Data Source = database.json, Pretty Print = true")]
-	[TestCase("Data Source = database.json, Pretty Print= true")]
-	[TestCase("Data Source = database.json, Pretty Print =true")]
+	[TestCase("Data Source = /test/datasource/folder, Pretty Print = true")]
+	[TestCase("Data Source = /test/datasource/folder, Pretty Print= true")]
+	[TestCase("Data Source = /test/datasource/folder, Pretty Print =true")]
 	public void CanParse_WithPrettyPrint(string connectionString)
 	{
 		AllaOptions options = AllaOptions.FromConnectionString(connectionString);
@@ -36,9 +36,9 @@ public class OptionsTests
 		Assert.That(options.PrettyPrint, Is.True);
 	}
 
-	[TestCase("Data Source = database.json, Enum Strings = false")]
-	[TestCase("Data Source = database.json, Enum Strings= false")]
-	[TestCase("Data Source = database.json, Enum Strings =false")]
+	[TestCase("Data Source = /test/datasource/folder, Enum Strings = false")]
+	[TestCase("Data Source = /test/datasource/folder, Enum Strings= false")]
+	[TestCase("Data Source = /test/datasource/folder, Enum Strings =false")]
 	public void CanParse_WithEnumStrings(string connectionString)
 	{
 		AllaOptions options = AllaOptions.FromConnectionString(connectionString);
@@ -46,7 +46,7 @@ public class OptionsTests
 		Assert.That(options.EnumStrings, Is.False);
 	}
 
-	[TestCase("Data Source = database.json, Enum Strings = false, Pretty Print = true")]
+	[TestCase("Data Source = /test/datasource/folder, Enum Strings = false, Pretty Print = true")]
 	public void CanParse_WithPrettyPrintAndEnumStrings(string connectionString)
 	{
 		AllaOptions options = AllaOptions.FromConnectionString(connectionString);
