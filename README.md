@@ -6,12 +6,12 @@ A very simple document "database" written in C# and serializing to JSON by defau
 
 ## Quick Start
 
-Create a new database using a connection string:
+Create a new database using a connection string. The database is serialized based on the serializer, by default it is saved to a "database.json" file in the data source folder.
 
 ```c#
 using AllaDb;
 
-string connectionString = "Data Source = database.json";
+string connectionString = "Data Source = /example/datasource/folder";
 Alla db = new(AllaOptions.FromConnectionString(connectionString));
 ```
 
@@ -55,3 +55,369 @@ using (Transaction transaction1 = myCollection.CreateTransaction())
 	transaction1.Commit();
 }
 ```
+
+## Reference
+
+### AllaOptions
+
+Namespace: `AllaDb`
+
+Configuration for the database.
+
+**Properties**
+
+```c#
+public string Datasource { get; set; }
+```
+
+Path to the database file. The special :memory: value will keep data in-memory and throw exceptions when attempting to persist.
+
+```c#
+public bool PrettyPrint { get; set; } = false;
+```
+
+If true, saves the database using line breaks and indents.
+
+```c#
+public bool EnumStrings { get; set; } = true;
+```
+
+If true, saves Enum values with constants instead of ordinals.
+
+**Methods**
+
+```c#
+public static AllaOptions FromConnectionString(string connectionString)
+```
+
+Creates an instance of AllaOptions from a connection string.
+
+### Alla
+
+Namespace: `AllaDb`
+
+A lightweight, limited application database storing key-value pairs.
+
+**Methods**
+
+```c#
+public Alla(AllaOptions options, IAllaSerializer? serializer = null)
+```
+
+Creates a new instance of Alla Db.
+
+Parameters:
+- `AllaOptions options`: The instance of options to configure the database.
+- `IAllaSerializer? serializer`: The serializer to use when persisting the database. If null, uses the default single-file serializer.
+
+```c#
+public IEnumerator GetEnumerator()
+```
+
+Exposes the enumerator of the underlying list of collections.
+
+Returns: An enumerator for the list of collections.
+
+```c#
+public void DropDatabase()
+```
+
+Removes all collections from the database.
+
+```c#
+public void DropCollection(string name)
+```
+
+Removes the collection whose name matches the specified name.
+
+Parameter:
+- `string name`: The name of the collection to remove.
+
+```c#
+public Collection GetCollection(string name)
+```
+
+Creates a collection in the database if the name does not already exist, or gets the collection in the database if the name already exists.
+
+Parameter:
+- `string name`: The name of the collection to be created or whose collection should be retrieved.
+
+Returns: The collection associated with the specified name.
+
+```c#
+public List<Collection> GetCollections()
+```
+
+Get all collections in the database.
+
+Returns: All collections in the database.
+
+```c#
+public void Persist()
+```
+
+Serializes the database based on the connection string and the serializer. Throws an exception for in-memory databases.
+
+### IAllaSerializer
+
+Namespace: `AllaDb`
+
+A serializer interface that, when implemented, can be used to customize the serializer of the database.
+
+**Methods**
+
+```c#
+void EnsureCreated(Alla db)
+```
+
+Called when the database is initialized, ensures that at least an empty database file exists.
+
+```c#
+List<Collection> Load(Alla db)
+```
+
+Loads the database files and returns the deserialized collections.
+
+```c#
+void Persist(Alla db)
+```
+
+Saves the database to files.
+
+### DefaultSerializer
+
+Namespace: `AllaDb`
+
+Implements `IAllaSerializer`
+
+The default, single-file serializer used by the database when persisting. The database is serialized into a "database.json" file in the data source directory.
+
+### CollectionSerializer
+
+Namespace: `AllaDb`
+
+Implements `IAllaSerializer`
+
+A serializer that partitions by collections. The database is serialized into "database.[collection].json" files in the data source directory.
+
+### Document
+
+Namespace: `AllaDb`
+
+**Properties**
+
+```c#
+public string Id { get; set; } = Guid.NewGuid().ToString()
+```
+
+Unique identifier of this document.
+
+**Methods**
+
+```c#
+public IEnumerator GetEnumerator()
+```
+
+Exposes the enumerator of the underlying dictionary of key/value pairs.
+
+```c#
+public bool ContainsKey(string key)
+```
+
+Determines whether the document contains the specified key.
+
+Parameter:
+- `string key`: The key to locate in the fields.
+
+Returns: true if the fields contains a value with the specified key; otherwise, false.
+
+```c#
+public void Remove(string key)
+```
+
+Removes the value with the specified key from the fields.
+
+Parameter:
+- `string key`: The key of the field to remove.
+
+```c#
+public T? GetValue<T>(string key)
+```
+
+Gets the value associated with the specified key.
+
+Parameter:
+- `string key`: The key of the field to remove.
+
+Returns: The value associated with the specified key, if the key is found; otherwise, the default value for the type of the return value.
+
+```c#
+public bool TryGetValue<T>(string key, out T? value)
+```
+
+Gets the value associated with the specified key.
+
+Parameters:
+- `string key`: The key of the value to get.
+- `out T? value`: When this method returns, contains the value associated with the specified key, if the key is found; otherwise, the default vale for the type of the value parameter. This parameter is passed uninitialized.
+
+Returns: true if the fields contain a value with the specified key; otherwise, false.
+
+```c#
+public void AddOrUpdate(string key, object? value)
+```
+
+Adds a field to the document if the key does not already exist, or updates a field in the document if the key already exists.
+
+Parameters:
+- `string key`: The key to be added or whose value should be updated.
+- `object? value`: The value to be added for an absent key or a new value for an existing key.
+
+```c#
+public Dictionary<string, object?> GetFields()
+```
+
+Get all fields of the document.
+
+Returns: All fields of the document.
+
+### Collection
+
+Namespace: `AllaDb`
+
+A collection of documents.
+
+**Properties**
+
+```c#
+public required string Name { get; set; }
+```
+
+Unique name of this collection.
+
+```c#
+public bool HasTransactions { get; }
+```
+
+Returns true if this collection has any unresolved transactions.
+
+**Methods**
+
+```c#
+public IEnumerator GetEnumerator()
+```
+
+Exposes the enumerator of the underlying list of documents.
+
+```c#
+public void Clear()
+```
+
+Removes all documents from the collection.
+
+```c#
+public Document Add(Dictionary<string, object?> fields)
+```
+
+Adds a new document with the specified fields to the end of the collection.
+
+Parameter:
+- `Dictionary<string, object?> fields`: The fields of a new document to be added to the end of the collection.
+
+Returns: The new document in the collection.
+
+```c#
+public List<Document> AddRange(IEnumerable<Dictionary<string, object?>> fields)
+```
+
+Adds the specified list of fields to the end of the collection.
+
+Parameter:
+- `IEnumerable<Dictionary<string, object?>> fields`: The list of fields that should be added to the end of the collection.
+
+Returns: The list of new documents in the collection.
+
+```c#
+public void Remove(Document document)
+```
+
+Removes the specific document from the collection.
+
+Parameter:
+- `Document document`: The document to remove from the collection.
+
+```c#
+public void RemoveAll(Func<Document, bool> predicate)
+```
+
+Removes all document that match the condition defined by the specified delegate.
+
+Parameter:
+- `Func<Document, bool> predicate`: The function delegate that defines the condition of the documents to remove.
+
+```c#
+public Document? GetDocument(string id)
+```
+
+Gets the document associated with the specified ID.
+
+Parameter:
+- `string id`: The ID of the document to get.
+
+Returns: The document if the collection contains it by ID; otherwise, null.
+
+```c#
+public bool TryGetDocument(string id, [NotNullWhen(true)] out Document? document)
+```
+
+Gets the document associated with the specified ID.
+
+Parameters:
+- `string id`: The ID of the document to get.
+- `[NotNullWhen(true)] out Document? document`: When this method returns, contains the document associated with the specified ID, if the ID is found; otherwise, null. This parameter is passed uninitialized.
+
+Returns: true if the collection contains a document with the specified ID; otherwise, false.
+
+```c#
+public Transaction CreateTransaction()
+```
+
+Adds a new transaction over this collection to the end of the transaction stack.
+
+Returns: The new transaction over this collection.
+
+```c#
+public List<Document> GetDocuments()
+```
+
+Get all documents of the collection.
+
+Returns: All documents of the collection.
+
+### Transaction
+
+Namespace: `AllaDb`
+
+Implements: `IDisposable`
+
+Collection and document level transactions.
+
+**Methods**
+
+```c#
+public void Dispose()
+```
+
+Resolves the transaction. If unmarked, the default resolution is to commit.
+
+```c#
+public Transaction Commit()
+```
+
+Marks this transaction to be committed. This is the default resolution.
+
+```c#
+public Transaction Rollback()
+```
+
+Marks this transaction to be rolled back.
