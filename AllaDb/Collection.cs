@@ -10,7 +10,7 @@ public class Collection
 	/// <summary>Unique name of this collection.</summary>
 	public required string Name { get; set; }
 
-	internal List<Transaction> Transactions = [];
+	internal Stack<Transaction> Transactions = [];
 
 	/// <summary>Returns true if this collection has any unresolved transactions.</summary>
 	[JsonIgnore]
@@ -126,7 +126,7 @@ public class Collection
 	public Transaction CreateTransaction()
 	{
 		Transaction transaction = new(this);
-		Transactions.Add(transaction);
+		Transactions.Push(transaction);
 		return transaction;
 	}
 

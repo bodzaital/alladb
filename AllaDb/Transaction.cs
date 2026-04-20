@@ -52,7 +52,14 @@ public class Transaction : IDisposable
 			Changes.ForEach(CommitChange);
 		}
 		
-		_collection.Transactions.Remove(this);
+		bool isTop = _collection.Transactions.Peek() == this;
+
+		if (!isTop)
+		{
+			throw new Exception("Cannot dispose transaction (not on the top of stack).");
+		}
+
+		_collection.Transactions.Pop();
 
 		_isDisposed = true;
 	}
