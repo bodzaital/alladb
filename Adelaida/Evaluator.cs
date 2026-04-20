@@ -97,6 +97,12 @@ public class Evaluator
         Document = Collection?.GetDocument(args[0]);
     }
 
+    [Evaluator("persist")]
+    public void Persist(string[] args)
+    {
+        Db.Persist();
+    }
+
     private static T? ParseFieldValueWithType<T>(string input)
     {
         if (input == "(null)") return default;

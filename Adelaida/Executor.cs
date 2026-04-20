@@ -1,6 +1,5 @@
 using System.ComponentModel;
-using System.Text.Json;
-using AllaDb;
+using System.Text.RegularExpressions;
 using Spectre.Console.Cli;
 
 namespace Adelaida;
@@ -30,7 +29,9 @@ public class Executor : Command<Executor.ReplSettings>
 
             Console.Write($"({handle}) > ");
 
-            string[] input = Console.ReadLine()!.Split(' ');
+            Regex r = new("(\".*?\"|\\S+)");
+            MatchCollection ms = r.Matches(Console.ReadLine()!);
+            string[] input = [.. ms.Select((x) => x.Value).Select((x) => x.Trim('"'))];
             string cmd = input[0];
             string[] args = input[1..];
 
