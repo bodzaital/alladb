@@ -31,6 +31,8 @@ public class Transaction : IDisposable
 
 	private readonly Collection _collection;
 
+	private bool _isDisposed = false;
+
 	internal Resolution Result = Resolution.Committed;
 
 	internal List<Change> Changes { get; set; } = [];
@@ -43,12 +45,16 @@ public class Transaction : IDisposable
 	/// <summary>Resolves the transaction. If unmarked, the default resolution is to commit.</summary>
 	public void Dispose()
 	{
+		if (_isDisposed) return;
+
 		if (Result == Resolution.Committed)
 		{
 			Changes.ForEach(CommitChange);
 		}
 		
 		_collection.Transactions.Remove(this);
+
+		_isDisposed = true;
 	}
 
 	/// <summary>Marks this transaction to be committed. This is the default resolution.</summary>
