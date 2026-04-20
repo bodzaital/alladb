@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.RegularExpressions;
 using AllaDb;
 
 namespace Adelaida;
@@ -79,7 +80,7 @@ public class Evaluator
     {
         Dictionary<string, object?> fields = args.ToList()
             .Select((x) => x.Split('='))
-            .ToDictionary((key) => key[0], (val) => (object?)val[1]);
+            .ToDictionary((key) => key[0], (val) => ParseFieldValueWithType<object?>(val[1]));
 
         Collection!.Add(fields);
     }
@@ -94,5 +95,37 @@ public class Evaluator
     public void GetDocument(string[] args)
     {
         Document = Collection?.GetDocument(args[0]);
+    }
+
+    private static T? ParseFieldValueWithType<T>(string input)
+    {
+        if (input == "(null)") return default;
+
+        Regex r = new(@"(?:\((?<type>\w+)\))?(?<value>.+)");
+        Match m = r.Match(input);
+
+        Group type = m.Groups["type"];
+        Group value = m.Groups["value"];
+
+        Type valueType = typeof(string);
+
+        if (type.Success)
+        {
+            valueType = type.Value switch
+            {
+                "int" => typeof(int),
+                "bool" => typeof(bool),
+                _ => valueType,
+            };
+        }
+
+        if (!value.Success)
+        {
+            Console.WriteLine($"Failed to parse value '{input}' with regex.");
+            Console.WriteLine($"Parsed type was '{valueType}'.");
+            throw new Exception("No field value.");
+        }
+
+        return (T)Convert.ChangeType(value.Value, valueType);
     }
 }
