@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Spectre.Console.Cli;
 
@@ -29,8 +31,13 @@ public class Executor : Command<Executor.ReplSettings>
 
             Console.Write($"({handle}) > ");
 
+            Input.Setup([.. evaluator.Evaluators()]);
+            string userInput = Input.ReadLine();
+
+            if (userInput.Trim() == string.Empty) continue;
+
             Regex r = new("(\".*?\"|\\S+)");
-            MatchCollection ms = r.Matches(Console.ReadLine()!);
+            MatchCollection ms = r.Matches(userInput);
             string[] input = [.. ms.Select((x) => x.Value).Select((x) => x.Trim('"'))];
             string cmd = input[0];
             string[] args = input[1..];
@@ -38,7 +45,6 @@ public class Executor : Command<Executor.ReplSettings>
             evaluator.Evaluate(cmd, args);
         } while (evaluator.IsLooping);
 
-        evaluator.Db.Persist();
         Console.WriteLine("Bye!");
 
         return 0;

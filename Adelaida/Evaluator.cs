@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using AllaDb;
 
@@ -6,6 +7,11 @@ namespace Adelaida;
 
 public class Evaluator
 {
+    private static JsonSerializerOptions serializerOptions = new()
+    {
+        WriteIndented = true,
+    };
+
     private readonly Dictionary<string, Action<string[]>> _evaluators;
     public Alla Db { get; init; }
     public Collection? Collection;
@@ -16,11 +22,11 @@ public class Evaluator
     {
         Db = new(AllaOptions.FromConnectionString(connectionString));
 
-        _evaluators =  GetType()
+        _evaluators = GetType()
             .GetMethods()
-            .Where((x) => x.GetCustomAttribute<EvaluatorAttribute>() is not null)
+            .Where((x) => x.GetCustomAttribute<EvaluatorMethodAttribute>() is not null)
             .ToDictionary(
-                (key) => key.GetCustomAttribute<EvaluatorAttribute>()!.Name,
+                (key) => key.GetCustomAttribute<EvaluatorMethodAttribute>()!.Name,
                 (value) => value.CreateDelegate<Action<string[]>>(this)
             );
     }
@@ -38,46 +44,112 @@ public class Evaluator
         action.Invoke(args);
     }
 
-    [Evaluator("exit")]
+    public List<string> Evaluators()
+    {
+        return [.. GetType()
+            .GetMethods()
+            .Where((x) => x.GetCustomAttribute<EvaluatorMethodAttribute>() is not null)
+            .Select((x) => x.GetCustomAttribute<EvaluatorMethodAttribute>()!.Name)
+        ];
+    }
+
+    public Dictionary<string, string> GetEvaluators()
+    {
+        return GetType()
+            .GetMethods()
+            .Where((x) => x.GetCustomAttribute<EvaluatorMethodAttribute>() is not null)
+            .Select((x) =>
+            {
+                string name = x.GetCustomAttribute<EvaluatorMethodAttribute>()!.Name;
+                string? description = x.GetCustomAttribute<EvaluatorDescriptionAttribute>()?.Text;
+
+                return new List<string>() {name, description ?? ""};
+            }).ToDictionary((x) => x.First(), (x) => x.Last());
+    }
+
+    [EvaluatorMethod("help")]
+    public void Help(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            Console.WriteLine(string.Join(", ", Evaluators()));
+            return;
+        }
+
+        Dictionary<string, string> autocompletions = GetEvaluators()
+			.Where((x) => x.Key.StartsWith(args.First()))
+            .ToDictionary();
+
+        if (autocompletions.Count > 1 && !autocompletions.ContainsKey(args.First()))
+        {
+            Console.WriteLine(string.Join(", ", autocompletions.Select((x) => x.Key)));
+            return;
+        }
+
+        if (autocompletions.Count == 1 || autocompletions.ContainsKey(args.First()))
+        {
+            string line = autocompletions.First().Value != string.Empty
+                ? $"{autocompletions.First().Key}: {autocompletions.First().Value}"
+                : $"{autocompletions.First().Key}";
+                
+            Console.WriteLine(line);
+
+            return;
+        }
+
+        Console.WriteLine("No function found.");
+    }
+
+    [EvaluatorMethod("exit")]
+    [EvaluatorDescription("Persists the database and exits the CLI.")]
     public void Exit(string[] args)
     {
         IsLooping = false;
     }
 
-    [Evaluator("drop-database")]
+    [EvaluatorMethod("drop-database")]
     public void DropDatabase(string[] args)
     {
         Db.DropDatabase();
     }
 
-    [Evaluator("drop-collection")]
+    [EvaluatorMethod("drop-collection")]
     public void DropCollection(string[] args)
     {
+        if (RequiresArguments(args)) return;
+
         Db.DropCollection(args[0]);
     }
 
-    [Evaluator("get-collections")]
+    [EvaluatorMethod("get-collections")]
     public void GetCollections(string[] args)
     {
         Db.GetCollections().ForEach((x) => Console.WriteLine(x.Name));
     }
 
-    [Evaluator("get-collection")]
+    [EvaluatorMethod("get-collection")]
     public void GetCollection(string[] args)
     {
+        if (RequiresArguments(args)) return;
+
         Collection = Db.GetCollection(args[0]);
         Document = null;
     }
 
-    [Evaluator("clear")]
+    [EvaluatorMethod("clear")]
     public void Clear(string[] args)
     {
+        if (RequiresCollection()) return;
+
         Collection!.Clear();
     }
 
-    [Evaluator("add")]
+    [EvaluatorMethod("add")]
     public void Add(string[] args)
     {
+        if (RequiresCollection()) return;
+        if (RequiresArguments(args)) return;
+
         Dictionary<string, object?> fields = args.ToList()
             .Select((x) => x.Split('='))
             .ToDictionary((key) => key[0], (val) => ParseFieldValueWithType<object?>(val[1]));
@@ -85,22 +157,97 @@ public class Evaluator
         Collection!.Add(fields);
     }
 
-    [Evaluator("get-documents")]
+    [EvaluatorMethod("get-documents")]
     public void GetDocuments(string[] args)
     {
-        Collection?.GetDocuments().ForEach((x) => Console.WriteLine(x.Id));
+        if (RequiresCollection()) return;
+
+        Collection!.GetDocuments().ForEach((x) => Console.WriteLine(x.Id));
     }
 
-    [Evaluator("get-document")]
+    [EvaluatorMethod("get-document")]
     public void GetDocument(string[] args)
     {
-        Document = Collection?.GetDocument(args[0]);
+        if (RequiresCollection()) return;
+        if (RequiresArguments(args)) return;
+
+        Document = Collection!.GetDocument(args[0]);
     }
 
-    [Evaluator("persist")]
+    [EvaluatorMethod("get-fields")]
+    public void GetFields(string[] args)
+    {
+        if (RequiresCollection()) return;
+        if (RequiresDocument()) return;
+
+        Dictionary<string, object?> fields = Document!.GetFields();
+
+        Console.WriteLine(JsonSerializer.Serialize(fields, serializerOptions));
+    }
+
+    [EvaluatorMethod("remove-field")]
+    public void RemoveFields(string[] args)
+    {
+        if (RequiresCollection()) return;
+        if (RequiresDocument()) return;
+
+        if (RequiresArguments(args)) return;
+
+        Document!.Remove(args[0]);
+        Console.WriteLine("Removed.");
+    }
+
+    [EvaluatorMethod("set-fields")]
+    public void SetFields(string[] args)
+    {
+        if (RequiresCollection()) return;
+        if (RequiresDocument()) return;
+        if (RequiresArguments(args)) return;
+
+        Dictionary<string, object?> fields = args.ToList()
+            .Select((x) => x.Split('='))
+            .ToDictionary((key) => key[0], (val) => ParseFieldValueWithType<object?>(val[1]));
+
+        fields.ToList().ForEach((x) => Document!.AddOrUpdate(x.Key, x.Value));
+    }
+
+    [EvaluatorMethod("persist")]
     public void Persist(string[] args)
     {
         Db.Persist();
+    }
+
+    private bool RequiresCollection()
+    {
+        if (Collection is null)
+        {
+            Console.WriteLine("This requires a collection.");
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool RequiresDocument()
+    {
+        if (Document is null)
+        {
+            Console.WriteLine("This requires a document.");
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool RequiresArguments(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            Console.WriteLine("This requires arguments.");
+            return true;
+        }
+
+        return false;
     }
 
     private static T? ParseFieldValueWithType<T>(string input)
