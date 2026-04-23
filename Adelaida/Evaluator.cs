@@ -17,6 +17,7 @@ public class Evaluator
     public Collection? Collection;
     public Document? Document;
     public bool IsLooping { get; set; } = true;
+    public Queue<string> History { get; set; } = [];
 
     public Evaluator(string connectionString)
     {
@@ -65,6 +66,18 @@ public class Evaluator
 
                 return new List<string>() {name, description ?? ""};
             }).ToDictionary((x) => x.First(), (x) => x.Last());
+    }
+
+    [EvaluatorMethod("history")]
+    public void GetHistory(string[] args)
+    {
+        History.ToList().ForEach(Console.WriteLine);
+    }
+
+    public void PushHistory(string cmd)
+    {
+        History.Enqueue(cmd);
+        if (History.Count > 10) History.Dequeue();
     }
 
     [EvaluatorMethod("help")]

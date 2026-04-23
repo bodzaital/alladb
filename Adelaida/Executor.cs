@@ -42,6 +42,8 @@ public class Executor : Command<Executor.ReplSettings>
             string cmd = input[0];
             string[] args = input[1..];
 
+            evaluator.PushHistory(cmd);
+
             evaluator.Evaluate(cmd, args);
         } while (evaluator.IsLooping);
 
