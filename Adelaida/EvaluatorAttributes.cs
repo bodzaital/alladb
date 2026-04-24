@@ -11,3 +11,9 @@ public class EvaluatorDescriptionAttribute(string text) : Attribute
 {
     public string Text { get; set; } = text;
 }
+
+public record EvaluatorInfo(
+    string Name,
+    string Description,
+    Action<string[]> Action
+);

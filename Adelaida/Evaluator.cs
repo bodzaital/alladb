@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -12,7 +13,7 @@ public class Evaluator
         WriteIndented = true,
     };
 
-    private readonly Dictionary<string, Action<string[]>> _evaluators;
+    private readonly List<EvaluatorInfo> _evaluatorInfos = [];
     public Alla Db { get; init; }
     public Collection? Collection;
     public Document? Document;
@@ -22,51 +23,35 @@ public class Evaluator
     public Evaluator(string connectionString)
     {
         Db = new(AllaOptions.FromConnectionString(connectionString));
-
-        _evaluators = GetType()
+        
+        _evaluatorInfos = [.. GetType()
             .GetMethods()
             .Where((x) => x.GetCustomAttribute<EvaluatorMethodAttribute>() is not null)
-            .ToDictionary(
-                (key) => key.GetCustomAttribute<EvaluatorMethodAttribute>()!.Name,
-                (value) => value.CreateDelegate<Action<string[]>>(this)
-            );
+            .Select((x) => new EvaluatorInfo(
+                x.GetCustomAttribute<EvaluatorMethodAttribute>()!.Name,
+                x.GetCustomAttribute<EvaluatorDescriptionAttribute>()?.Text ?? string.Empty,
+                x.CreateDelegate<Action<string[]>>(this)
+            ))
+        ];
     }
 
     public void Evaluate(string name, string[] args)
     {
-        if (_evaluators.Count == 0) throw new Exception("There are no evaluators.");
-
-        if (!_evaluators.TryGetValue(name, out Action<string[]>? action))
+        EvaluatorInfo? evaluatorInfo = _evaluatorInfos.Find((x) => x.Name == name);
+        if (evaluatorInfo is null)
         {
             Console.WriteLine($"No evaluator for {name}.");
             return;
         }
 
-        action.Invoke(args);
+        evaluatorInfo.Action.Invoke(args);
     }
 
-    public List<string> Evaluators()
-    {
-        return [.. GetType()
-            .GetMethods()
-            .Where((x) => x.GetCustomAttribute<EvaluatorMethodAttribute>() is not null)
-            .Select((x) => x.GetCustomAttribute<EvaluatorMethodAttribute>()!.Name)
-        ];
-    }
+    public List<string> Evaluators() =>
+        [.. _evaluatorInfos.Select((x) => x.Name)];
 
-    public Dictionary<string, string> GetEvaluators()
-    {
-        return GetType()
-            .GetMethods()
-            .Where((x) => x.GetCustomAttribute<EvaluatorMethodAttribute>() is not null)
-            .Select((x) =>
-            {
-                string name = x.GetCustomAttribute<EvaluatorMethodAttribute>()!.Name;
-                string? description = x.GetCustomAttribute<EvaluatorDescriptionAttribute>()?.Text;
-
-                return new List<string>() {name, description ?? ""};
-            }).ToDictionary((x) => x.First(), (x) => x.Last());
-    }
+    public Dictionary<string, string> GetEvaluators() =>
+        _evaluatorInfos.ToDictionary((x) => x.Name, (x) => x.Description);
 
     [EvaluatorMethod("history")]
     public void GetHistory(string[] args)
@@ -91,9 +76,9 @@ public class Evaluator
             return;
         }
 
-        Dictionary<string, string> autocompletions = GetEvaluators()
-			.Where((x) => x.Key.StartsWith(args.First()))
-            .ToDictionary();
+        Dictionary<string, string> autocompletions = _evaluatorInfos
+			.Where((x) => x.Name.StartsWith(args.First()))
+            .ToDictionary((x) => x.Name, (x) => x.Description);
 
         KeyValuePair<string, string> foundFunction = autocompletions.FirstOrDefault((x) => x.Key == args.First());
 
@@ -113,6 +98,12 @@ public class Evaluator
                 : function.Key;
 
             Console.WriteLine(text);
+            return;
+        }
+        else if (autocompletions.Count > 0)
+        {
+            Console.WriteLine("List of functions:");
+            Console.WriteLine(string.Join(", ", autocompletions.Select((x) => x.Key)));
             return;
         }
 
