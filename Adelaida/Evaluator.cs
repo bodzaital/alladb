@@ -85,7 +85,9 @@ public class Evaluator
     {
         if (args.Length == 0)
         {
+            Console.WriteLine("List of functions:");
             Console.WriteLine(string.Join(", ", Evaluators()));
+            Console.WriteLine("Type \"help [function]\" for more info.");
             return;
         }
 
@@ -93,20 +95,24 @@ public class Evaluator
 			.Where((x) => x.Key.StartsWith(args.First()))
             .ToDictionary();
 
-        if (autocompletions.Count > 1 && !autocompletions.ContainsKey(args.First()))
-        {
-            Console.WriteLine(string.Join(", ", autocompletions.Select((x) => x.Key)));
-            return;
-        }
+        KeyValuePair<string, string> foundFunction = autocompletions.FirstOrDefault((x) => x.Key == args.First());
 
-        if (autocompletions.Count == 1 || autocompletions.ContainsKey(args.First()))
-        {
-            string line = autocompletions.First().Value != string.Empty
-                ? $"{autocompletions.First().Key}: {autocompletions.First().Value}"
-                : $"{autocompletions.First().Key}";
-                
-            Console.WriteLine(line);
+        bool foundSpecificFunction = autocompletions.Count == 1;
+        bool foundExactInAutocompletions = !foundFunction.Equals(default(KeyValuePair<string, string>));
 
+        if (foundSpecificFunction || foundExactInAutocompletions)
+        {
+            KeyValuePair<string, string> function = foundSpecificFunction
+                ? autocompletions.First()
+                : foundFunction;
+
+            bool hasDescription = function.Value != string.Empty;
+
+            string text = hasDescription
+                ? $"{function.Key}: {function.Value}"
+                : function.Key;
+
+            Console.WriteLine(text);
             return;
         }
 
@@ -114,7 +120,7 @@ public class Evaluator
     }
 
     [EvaluatorMethod("exit")]
-    [EvaluatorDescription("Persists the database and exits the CLI.")]
+    [EvaluatorDescription("Exits the CLI.")]
     public void Exit(string[] args)
     {
         IsLooping = false;
@@ -252,7 +258,7 @@ public class Evaluator
         return false;
     }
 
-    private bool RequiresArguments(string[] args)
+    private static bool RequiresArguments(string[] args)
     {
         if (args.Length == 0)
         {
