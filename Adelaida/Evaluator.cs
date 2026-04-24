@@ -17,6 +17,7 @@ public class Evaluator
     public Alla Db { get; init; }
     public Collection? Collection;
     public Document? Document;
+    public Transaction? Transaction;
     public bool IsLooping { get; set; } = true;
     public Queue<string> History { get; set; } = [];
 
@@ -47,22 +48,19 @@ public class Evaluator
         evaluatorInfo.Action.Invoke(args);
     }
 
+    public void PushHistory(string cmd)
+    {
+        History.Enqueue(cmd);
+        if (History.Count > 10) History.Dequeue();
+    }
+
     public List<string> Evaluators() =>
         [.. _evaluatorInfos.Select((x) => x.Name)];
-
-    public Dictionary<string, string> GetEvaluators() =>
-        _evaluatorInfos.ToDictionary((x) => x.Name, (x) => x.Description);
 
     [EvaluatorMethod("history")]
     public void GetHistory(string[] args)
     {
         History.ToList().ForEach(Console.WriteLine);
-    }
-
-    public void PushHistory(string cmd)
-    {
-        History.Enqueue(cmd);
-        if (History.Count > 10) History.Dequeue();
     }
 
     [EvaluatorMethod("help")]
@@ -117,27 +115,38 @@ public class Evaluator
         IsLooping = false;
     }
 
+#region Alla evaluators.
+
     [EvaluatorMethod("drop-database")]
+    [EvaluatorDescription("Removes all collections from the database.")]
     public void DropDatabase(string[] args)
     {
+        if (RequiresConfirmation()) return;
+
         Db.DropDatabase();
+        Console.WriteLine("database dropped");
     }
 
     [EvaluatorMethod("drop-collection")]
+    [EvaluatorDescription("args: [name], Removes the collection whose name matches the specified name.")]
     public void DropCollection(string[] args)
     {
         if (RequiresArguments(args)) return;
+        if (RequiresConfirmation()) return;
 
         Db.DropCollection(args[0]);
+        Console.WriteLine("collection dropped");
     }
 
     [EvaluatorMethod("get-collections")]
+    [EvaluatorDescription("Get all collections in the database.")]
     public void GetCollections(string[] args)
     {
-        Db.GetCollections().ForEach((x) => Console.WriteLine(x.Name));
+        Db.GetCollections().ForEach((x) => Console.WriteLine($"{x.Name} ({x.GetDocuments().Count})"));
     }
 
     [EvaluatorMethod("get-collection")]
+    [EvaluatorDescription("args: [name], Creates a collection in the database if the name does not already exist, or gets the collection in the database if the name already exists.")]
     public void GetCollection(string[] args)
     {
         if (RequiresArguments(args)) return;
@@ -146,16 +155,38 @@ public class Evaluator
         Document = null;
     }
 
+    [EvaluatorMethod("persist")]
+    [EvaluatorDescription("Serializes the database based on the connection string and the serializer.")]
+    public void Persist(string[] args)
+    {
+        try
+        {
+            Db.Persist();
+            Console.WriteLine("database saved");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error: {e.Message}");
+        }
+    }
+
+#endregion
+
+#region Collection evaluators.
+
     [EvaluatorMethod("clear")]
     public void Clear(string[] args)
     {
         if (RequiresCollection()) return;
+        if (RequiresConfirmation()) return;
 
         Collection!.Clear();
+
+        Console.WriteLine("collection cleared");
     }
 
     [EvaluatorMethod("add")]
-    public void Add(string[] args)
+    public void AddDocument(string[] args)
     {
         if (RequiresCollection()) return;
         if (RequiresArguments(args)) return;
@@ -165,6 +196,22 @@ public class Evaluator
             .ToDictionary((key) => key[0], (val) => ParseFieldValueWithType<object?>(val[1]));
 
         Collection!.Add(fields);
+
+        Console.WriteLine("document added");
+    }
+
+    [EvaluatorMethod("remove")]
+    public void RemoveDocument(string[] args)
+    {
+        if (RequiresCollection()) return;
+        if (RequiresDocument()) return;
+        if (RequiresArguments(args)) return;
+        if (RequiresConfirmation()) return;
+
+        Collection!.Remove(Document!);
+        Document = null;
+
+        Console.WriteLine("document removed");
     }
 
     [EvaluatorMethod("get-documents")]
@@ -183,6 +230,25 @@ public class Evaluator
 
         Document = Collection!.GetDocument(args[0]);
     }
+
+    [EvaluatorMethod("close-collection")]
+    public void CloseCollection(string[] args)
+    {
+        if (RequiresCollection()) return;
+
+        Collection = null;
+    }
+
+    [EvaluatorMethod("create-transaction")]
+    public void CreateTransaction(string[] args)
+    {
+        if (RequiresCollection()) return;
+
+        Transaction = Collection!.CreateTransaction();
+        Console.WriteLine("transaction created");
+    }
+
+#endregion
 
     [EvaluatorMethod("get-fields")]
     public void GetFields(string[] args)
@@ -221,12 +287,6 @@ public class Evaluator
         fields.ToList().ForEach((x) => Document!.AddOrUpdate(x.Key, x.Value));
     }
 
-    [EvaluatorMethod("persist")]
-    public void Persist(string[] args)
-    {
-        Db.Persist();
-    }
-
     private bool RequiresCollection()
     {
         if (Collection is null)
@@ -260,6 +320,16 @@ public class Evaluator
         return false;
     }
 
+    private static bool RequiresConfirmation()
+    {
+        Console.Write("Are you sure? (y,N) > ");
+        ConsoleKeyInfo answer = Console.ReadKey();
+        
+        Console.WriteLine();
+
+        return answer.Key != ConsoleKey.Y;
+    }
+    
     private static T? ParseFieldValueWithType<T>(string input)
     {
         if (input == "(null)") return default;
