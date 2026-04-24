@@ -32,7 +32,7 @@ public class Executor : Command<Executor.ReplSettings>
             Console.Write($"({handle}) > ");
 
             Input.Setup([.. evaluator.Evaluators()]);
-            string userInput = Input.ReadLine();
+            string userInput = Input.ReadLine(evaluator.History);
 
             if (userInput.Trim() == string.Empty) continue;
 
@@ -42,7 +42,7 @@ public class Executor : Command<Executor.ReplSettings>
             string cmd = input[0];
             string[] args = input[1..];
 
-            evaluator.PushHistory(cmd);
+            evaluator.PushHistory(userInput);
 
             evaluator.Evaluate(cmd, args);
         } while (evaluator.IsLooping);

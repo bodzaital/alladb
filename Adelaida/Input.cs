@@ -30,7 +30,7 @@ public static class Input
 		_completionSource = completionSource;
 	}
 
-	public static string ReadLine()
+	public static string ReadLine(Queue<string> history)
 	{
 		_stringBuilder = new();
 
@@ -44,6 +44,7 @@ public static class Input
 			else if (ShouldEnter(keyInfo.Key)) HandleEnter();
 			else if (ShouldBackspace(keyInfo.Key) && CanBackspace()) HandleBackspace();
 			else if (ShouldTab(keyInfo.Key)) HandleTab();
+			else if (ShouldArrow(keyInfo.Key)) HandleUpArrow(history);
 		} while (keyInfo.Key != ConsoleKey.Enter);
 
 		string input = _stringBuilder.ToString();
@@ -53,6 +54,18 @@ public static class Input
 		
 		return input;
 	}
+
+	private static void HandleUpArrow(Queue<string> history)
+	{
+		if (history.Count > 0)
+		{
+			HandleBackspace(_stringBuilder!.Length);
+			history.Last().ToList().ForEach(HandleAlphanumeric);
+		}
+	}
+
+	private static bool ShouldArrow(ConsoleKey key) =>
+		_arrowKeys.Contains(key);
 
 	private static bool IsAlphanumeric(ConsoleKey key) =>
 		!_controlKeys.Contains(key);
@@ -69,16 +82,15 @@ public static class Input
 	private static bool CanBackspace() =>
 		_stringBuilder!.Length > 0;
 
-	private static void HandleAlphanumeric(char character)
-	{
-		Console.Write(character);
-		_stringBuilder!.Append(character);
-	}
-
 	private static void HandleAlphanumeric(string text)
 	{
 		Console.Write(text);
 		_stringBuilder!.Append(text);
+	}
+
+	private static void HandleAlphanumeric(char character)
+	{
+		HandleAlphanumeric(character.ToString());
 	}
 
 	private static void HandleEnter()
