@@ -104,9 +104,9 @@ public static class Input
 	{
 		RemoveLastKeys(length);
 
-		length.Times((_) => MoveConsoleCursor(-1, 0));
-		length.Times((_) => Console.Write(" "));
-		length.Times((_) => MoveConsoleCursor(-1, 0));
+		length.Times(() => MoveConsoleCursor(-1, 0));
+		length.Times(() => Console.Write(" "));
+		length.Times(() => MoveConsoleCursor(-1, 0));
 	}
 
 	private static void HandleTab()
@@ -125,7 +125,7 @@ public static class Input
 
 	private static void RemoveLastKeys(int length = 1)
 	{
-		length.Times((_) => _stringBuilder = _stringBuilder!.Remove(_stringBuilder.Length - 1, 1));
+		length.Times(() => _stringBuilder = _stringBuilder!.Remove(_stringBuilder.Length - 1, 1));
 	}
 
 	private static void MoveConsoleCursor(int dx, int dy) => Console.SetCursorPosition(
