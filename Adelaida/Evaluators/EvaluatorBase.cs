@@ -5,7 +5,7 @@ namespace Adelaida.Evaluators;
 
 public abstract class EvaluatorBase
 {
-    protected static JsonSerializerOptions PrettySerializer = new()
+    protected readonly static JsonSerializerOptions PrettySerializer = new()
     {
         WriteIndented = true,
     };

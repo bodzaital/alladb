@@ -1,4 +1,4 @@
-namespace Adelaida;
+namespace Adelaida.Evaluators;
 
 [AttributeUsage(AttributeTargets.Method)]
 public class EvaluatorMethodAttribute(string name) : Attribute
