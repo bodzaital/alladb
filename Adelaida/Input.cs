@@ -4,8 +4,6 @@ namespace Adelaida;
 
 public static class Input
 {
-	private static readonly int _maxQueue = 10;
-
 	private static readonly ConsoleKey[] _arrowKeys = [
 		ConsoleKey.UpArrow,
 		ConsoleKey.RightArrow,
@@ -20,17 +18,21 @@ public static class Input
 		.._arrowKeys,
 	];
 
-	private static readonly Queue<string> _inputs = [];
-
 	private static StringBuilder? _stringBuilder;
 	private static List<string> _completionSource = [];
+	private static Queue<string> _history { get; set; } = [];
 
 	public static void Setup(List<string> completionSource)
 	{
 		_completionSource = completionSource;
 	}
 
-	public static string ReadLine(Queue<string> history)
+	public static void WriteHistory()
+	{
+		_history.ToList().ForEach(Console.WriteLine);
+	}
+
+	public static string ReadLine()
 	{
 		_stringBuilder = new();
 
@@ -44,23 +46,23 @@ public static class Input
 			else if (ShouldEnter(keyInfo.Key)) HandleEnter();
 			else if (ShouldBackspace(keyInfo.Key) && CanBackspace()) HandleBackspace();
 			else if (ShouldTab(keyInfo.Key)) HandleTab();
-			else if (ShouldArrow(keyInfo.Key)) HandleUpArrow(history);
+			else if (ShouldArrow(keyInfo.Key)) HandleUpArrow();
 		} while (keyInfo.Key != ConsoleKey.Enter);
 
 		string input = _stringBuilder.ToString();
-		_inputs.Enqueue(input);
-
-		if (_inputs.Count > _maxQueue) _inputs.Dequeue();
+		
+		_history.Enqueue(input);
+		if (_history.Count > 10) _history.Dequeue();
 		
 		return input;
 	}
 
-	private static void HandleUpArrow(Queue<string> history)
+	private static void HandleUpArrow()
 	{
-		if (history.Count > 0)
+		if (_history.Count > 0)
 		{
 			HandleBackspace(_stringBuilder!.Length);
-			history.Last().ToList().ForEach(HandleAlphanumeric);
+			_history.Last().ToList().ForEach(HandleAlphanumeric);
 		}
 	}
 

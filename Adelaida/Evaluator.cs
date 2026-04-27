@@ -19,7 +19,6 @@ public class Evaluator
     public Document? Document;
     public Transaction? Transaction;
     public bool IsLooping { get; set; } = true;
-    public Queue<string> History { get; set; } = [];
 
     public Evaluator(string connectionString)
     {
@@ -48,20 +47,8 @@ public class Evaluator
         evaluatorInfo.Action.Invoke(args);
     }
 
-    public void PushHistory(string cmd)
-    {
-        History.Enqueue(cmd);
-        if (History.Count > 10) History.Dequeue();
-    }
-
     public List<string> Evaluators() =>
         [.. _evaluatorInfos.Select((x) => x.Name)];
-
-    [EvaluatorMethod("history")]
-    public void GetHistory(string[] args)
-    {
-        History.ToList().ForEach(Console.WriteLine);
-    }
 
     [EvaluatorMethod("help")]
     public void Help(string[] args)

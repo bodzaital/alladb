@@ -32,17 +32,21 @@ public class Executor : Command<Executor.ReplSettings>
             Console.Write($"({handle}) > ");
 
             Input.Setup([.. evaluator.Evaluators()]);
-            string userInput = Input.ReadLine(evaluator.History);
+            string userInput = Input.ReadLine();
 
             if (userInput.Trim() == string.Empty) continue;
+
+            if (userInput == "history")
+            {
+                Input.WriteHistory();
+                continue;
+            }
 
             Regex r = new("(\".*?\"|\\S+)");
             MatchCollection ms = r.Matches(userInput);
             string[] input = [.. ms.Select((x) => x.Value).Select((x) => x.Trim('"'))];
             string cmd = input[0];
             string[] args = input[1..];
-
-            evaluator.PushHistory(userInput);
 
             evaluator.Evaluate(cmd, args);
         } while (evaluator.IsLooping);
