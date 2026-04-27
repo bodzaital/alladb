@@ -46,7 +46,7 @@ public static class Input
 			else if (ShouldEnter(keyInfo.Key)) HandleEnter();
 			else if (ShouldBackspace(keyInfo.Key) && CanBackspace()) HandleBackspace();
 			else if (ShouldTab(keyInfo.Key)) HandleTab();
-			else if (ShouldArrow(keyInfo.Key)) HandleUpArrow();
+			else if (ShouldArrow(keyInfo.Key)) HandleArrow(keyInfo.Key);
 		} while (keyInfo.Key != ConsoleKey.Enter);
 
 		string input = _stringBuilder.ToString();
@@ -57,12 +57,15 @@ public static class Input
 		return input;
 	}
 
-	private static void HandleUpArrow()
+	private static void HandleArrow(ConsoleKey key)
 	{
-		if (_history.Count > 0)
+		if (key == ConsoleKey.UpArrow)
 		{
-			HandleBackspace(_stringBuilder!.Length);
-			_history.Last().ToList().ForEach(HandleAlphanumeric);
+			if (_history.Count > 0)
+			{
+				HandleBackspace(_stringBuilder!.Length);
+				_history.Last().ToList().ForEach(HandleAlphanumeric);
+			}
 		}
 	}
 
