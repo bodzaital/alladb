@@ -8,22 +8,20 @@ namespace Adelaida;
 
 public class Evaluator
 {
+    private readonly Context _ctx;
+
     private static JsonSerializerOptions serializerOptions = new()
     {
         WriteIndented = true,
     };
 
     private readonly List<EvaluatorInfo> _evaluatorInfos = [];
-    public Alla Db { get; init; }
-    public Collection? Collection;
-    public Document? Document;
-    public Transaction? Transaction;
     public bool IsLooping { get; set; } = true;
 
-    public Evaluator(string connectionString)
-    {
-        Db = new(AllaOptions.FromConnectionString(connectionString));
-        
+    public Evaluator(Context ctx)
+    {        
+        _ctx = ctx;
+
         _evaluatorInfos = [.. GetType()
             .GetMethods()
             .Where((x) => x.GetCustomAttribute<EvaluatorMethodAttribute>() is not null)
@@ -110,7 +108,7 @@ public class Evaluator
     {
         if (RequiresConfirmation()) return;
 
-        Db.DropDatabase();
+        _ctx.Db.DropDatabase();
         Console.WriteLine("database dropped");
     }
 
@@ -121,7 +119,7 @@ public class Evaluator
         if (RequiresArguments(args)) return;
         if (RequiresConfirmation()) return;
 
-        Db.DropCollection(args[0]);
+        _ctx.Db.DropCollection(args[0]);
         Console.WriteLine("collection dropped");
     }
 
@@ -129,7 +127,7 @@ public class Evaluator
     [EvaluatorDescription("Get all collections in the database.")]
     public void GetCollections(string[] args)
     {
-        Db.GetCollections().ForEach((x) => Console.WriteLine($"{x.Name} ({x.GetDocuments().Count})"));
+        _ctx.Db.GetCollections().ForEach((x) => Console.WriteLine($"{x.Name} ({x.GetDocuments().Count})"));
     }
 
     [EvaluatorMethod("get-collection")]
@@ -138,8 +136,8 @@ public class Evaluator
     {
         if (RequiresArguments(args)) return;
 
-        Collection = Db.GetCollection(args[0]);
-        Document = null;
+        _ctx.Collection = _ctx.Db.GetCollection(args[0]);
+        _ctx.Document = null;
     }
 
     [EvaluatorMethod("persist")]
@@ -148,7 +146,7 @@ public class Evaluator
     {
         try
         {
-            Db.Persist();
+            _ctx.Db.Persist();
             Console.WriteLine("database saved");
         }
         catch (Exception e)
@@ -164,10 +162,10 @@ public class Evaluator
     [EvaluatorMethod("clear")]
     public void Clear(string[] args)
     {
-        if (RequiresCollection()) return;
+        if (_ctx.RequiresCollection()) return;
         if (RequiresConfirmation()) return;
 
-        Collection!.Clear();
+        _ctx.Collection!.Clear();
 
         Console.WriteLine("collection cleared");
     }
@@ -175,14 +173,14 @@ public class Evaluator
     [EvaluatorMethod("add")]
     public void AddDocument(string[] args)
     {
-        if (RequiresCollection()) return;
+        if (_ctx.RequiresCollection()) return;
         if (RequiresArguments(args)) return;
 
         Dictionary<string, object?> fields = args.ToList()
             .Select((x) => x.Split('='))
             .ToDictionary((key) => key[0], (val) => ParseFieldValueWithType<object?>(val[1]));
 
-        Collection!.Add(fields);
+        _ctx.Collection!.Add(fields);
 
         Console.WriteLine("document added");
     }
@@ -190,13 +188,13 @@ public class Evaluator
     [EvaluatorMethod("remove")]
     public void RemoveDocument(string[] args)
     {
-        if (RequiresCollection()) return;
-        if (RequiresDocument()) return;
+        if (_ctx.RequiresCollection()) return;
+        if (_ctx.RequiresDocument()) return;
         if (RequiresArguments(args)) return;
         if (RequiresConfirmation()) return;
 
-        Collection!.Remove(Document!);
-        Document = null;
+        _ctx.Collection!.Remove(_ctx.Document!);
+        _ctx.Document = null;
 
         Console.WriteLine("document removed");
     }
@@ -204,35 +202,26 @@ public class Evaluator
     [EvaluatorMethod("get-documents")]
     public void GetDocuments(string[] args)
     {
-        if (RequiresCollection()) return;
+        if (_ctx.RequiresCollection()) return;
 
-        Collection!.GetDocuments().ForEach((x) => Console.WriteLine(x.Id));
+        _ctx.Collection!.GetDocuments().ForEach((x) => Console.WriteLine(x.Id));
     }
 
     [EvaluatorMethod("get-document")]
     public void GetDocument(string[] args)
     {
-        if (RequiresCollection()) return;
+        if (_ctx.RequiresCollection()) return;
         if (RequiresArguments(args)) return;
 
-        Document = Collection!.GetDocument(args[0]);
+        _ctx.Document = _ctx.Collection!.GetDocument(args[0]);
     }
 
     [EvaluatorMethod("close-collection")]
     public void CloseCollection(string[] args)
     {
-        if (RequiresCollection()) return;
+        if (_ctx.RequiresCollection()) return;
 
-        Collection = null;
-    }
-
-    [EvaluatorMethod("create-transaction")]
-    public void CreateTransaction(string[] args)
-    {
-        if (RequiresCollection()) return;
-
-        Transaction = Collection!.CreateTransaction();
-        Console.WriteLine("transaction created");
+        _ctx.Collection = null;
     }
 
 #endregion
@@ -240,10 +229,10 @@ public class Evaluator
     [EvaluatorMethod("get-fields")]
     public void GetFields(string[] args)
     {
-        if (RequiresCollection()) return;
-        if (RequiresDocument()) return;
+        if (_ctx.RequiresCollection()) return;
+        if (_ctx.RequiresDocument()) return;
 
-        Dictionary<string, object?> fields = Document!.GetFields();
+        Dictionary<string, object?> fields = _ctx.Document!.GetFields();
 
         Console.WriteLine(JsonSerializer.Serialize(fields, serializerOptions));
     }
@@ -251,49 +240,27 @@ public class Evaluator
     [EvaluatorMethod("remove-field")]
     public void RemoveFields(string[] args)
     {
-        if (RequiresCollection()) return;
-        if (RequiresDocument()) return;
+        if (_ctx.RequiresCollection()) return;
+        if (_ctx.RequiresDocument()) return;
 
         if (RequiresArguments(args)) return;
 
-        Document!.Remove(args[0]);
+        _ctx.Document!.Remove(args[0]);
         Console.WriteLine("Removed.");
     }
 
     [EvaluatorMethod("set-fields")]
     public void SetFields(string[] args)
     {
-        if (RequiresCollection()) return;
-        if (RequiresDocument()) return;
+        if (_ctx.RequiresCollection()) return;
+        if (_ctx.RequiresDocument()) return;
         if (RequiresArguments(args)) return;
 
         Dictionary<string, object?> fields = args.ToList()
             .Select((x) => x.Split('='))
             .ToDictionary((key) => key[0], (val) => ParseFieldValueWithType<object?>(val[1]));
 
-        fields.ToList().ForEach((x) => Document!.AddOrUpdate(x.Key, x.Value));
-    }
-
-    private bool RequiresCollection()
-    {
-        if (Collection is null)
-        {
-            Console.WriteLine("This requires a collection.");
-            return true;
-        }
-
-        return false;
-    }
-
-    private bool RequiresDocument()
-    {
-        if (Document is null)
-        {
-            Console.WriteLine("This requires a document.");
-            return true;
-        }
-
-        return false;
+        fields.ToList().ForEach((x) => _ctx.Document!.AddOrUpdate(x.Key, x.Value));
     }
 
     private static bool RequiresArguments(string[] args)
@@ -307,9 +274,9 @@ public class Evaluator
         return false;
     }
 
-    private static bool RequiresConfirmation()
+    private static bool RequiresConfirmation(string msg = "Are you sure?")
     {
-        Console.Write("Are you sure? (y,N) > ");
+        Console.Write($"{msg} (y,N) > ");
         ConsoleKeyInfo answer = Console.ReadKey();
         
         Console.WriteLine();

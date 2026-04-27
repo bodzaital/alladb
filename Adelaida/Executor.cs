@@ -18,18 +18,13 @@ public class Executor : Command<Executor.ReplSettings>
     
     protected override int Execute(CommandContext context, ReplSettings settings, CancellationToken cancellationToken)
     {
-        Evaluator evaluator = new(settings.ConnectionString);
+        Context ctx = new(settings.ConnectionString);
+        Evaluator evaluator = new(ctx);
         Console.WriteLine("Adelaida CLI, REPL up and running.");
 
         do
         {
-            string collectionName = evaluator.Collection?.Name ?? "no collection";
-            string documentId = evaluator.Document?.Id is not null
-                ? $" editing {evaluator.Document.Id}"
-                : "";
-            string handle = $"{collectionName}{documentId}";
-
-            Console.Write($"({handle}) > ");
+            Console.Write($"({ctx.GetHandle()}) > ");
 
             Input.Setup([.. evaluator.Evaluators()]);
             string userInput = Input.ReadLine();
