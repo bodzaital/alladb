@@ -1,9 +1,5 @@
-using System.ComponentModel.DataAnnotations;
 using System.Reflection;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using Adelaida.Evaluators;
-using AllaDb;
 
 namespace Adelaida;
 
@@ -42,7 +38,7 @@ public class Evaluator
         EvaluatorInfo? evaluatorInfo = _evaluators.Find((x) => x.Name == name);
         if (evaluatorInfo is null)
         {
-            Console.WriteLine($"No evaluator for {name}.");
+            Console.WriteLine($"No function called {name}.");
             return;
         }
 

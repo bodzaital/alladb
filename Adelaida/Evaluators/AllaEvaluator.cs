@@ -13,10 +13,15 @@ public class AllaEvaluator(Context ctx) : EvaluatorBase
     }
 
     [EvaluatorMethod("drop-collection")]
-    [EvaluatorDescription("args: [name], Removes the collection whose name matches the specified name.")]
+    [EvaluatorDescription("Removes the collection whose name matches the specified name.")]
     public void DropCollection(string[] args)
     {
-        if (RequiresArguments(args)) return;
+        Dictionary<string, string> requiredArgs = new()
+        {
+            { "name", "name of the collection" },
+        };
+
+        if (RequiresArguments(args, requiredArgs)) return;
         if (RequiresConfirmation()) return;
 
         ctx.Db.DropCollection(args[0]);
@@ -31,10 +36,15 @@ public class AllaEvaluator(Context ctx) : EvaluatorBase
     }
 
     [EvaluatorMethod("get-collection")]
-    [EvaluatorDescription("args: [name], Creates a collection in the database if the name does not already exist, or gets the collection in the database if the name already exists.")]
+    [EvaluatorDescription("Creates a collection in the database if the name does not already exist, or gets the collection in the database if the name already exists.")]
     public void GetCollection(string[] args)
     {
-        if (RequiresArguments(args)) return;
+        Dictionary<string, string> requiredArgs = new()
+        {
+            { "name", "name of the collection" },
+        };
+
+        if (RequiresArguments(args, requiredArgs)) return;
 
         ctx.Collection = ctx.Db.GetCollection(args[0]);
         ctx.Document = null;
@@ -44,6 +54,8 @@ public class AllaEvaluator(Context ctx) : EvaluatorBase
     [EvaluatorDescription("Serializes the database based on the connection string and the serializer.")]
     public void Persist(string[] args)
     {
+        if (ctx.RequiresNoTransaction()) return;
+        
         try
         {
             ctx.Db.Persist();
@@ -53,5 +65,19 @@ public class AllaEvaluator(Context ctx) : EvaluatorBase
         {
             Console.WriteLine($"Error: {e.Message}");
         }
+    }
+
+    [EvaluatorMethod("status")]
+    [EvaluatorDescription("Shows simple information regarding the current session.")]
+    public void Status(string[] args)
+    {
+        if (ctx.Collection is null && ctx.Document is null && ctx.Transaction is null)
+        {
+            Console.WriteLine("Loaded database. Ready for commands.\n  List collections with \"get-collections\"");
+        }
+
+        if (ctx.Collection is not null) Console.WriteLine($"In a collection.\n  List documents with \"get-documents {ctx.Collection.Name}\"");
+        if (ctx.Document is not null) Console.WriteLine($"Currently editing a document\n  List fields with \"get-fields {ctx.Document.Id}\"");
+        if (ctx.Transaction is not null) Console.WriteLine($"In an active transaction.\n  Commit with \"commit\"\n  Roll back with \"roll-back\"");
     }
 }

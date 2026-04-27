@@ -10,11 +10,12 @@ public abstract class EvaluatorBase
         WriteIndented = true,
     };
 
-    protected static bool RequiresArguments(string[] args)
+    protected static bool RequiresArguments(string[] args, Dictionary<string, string> requiredArgs)
     {
         if (args.Length == 0)
         {
-            Console.WriteLine("This requires arguments.");
+            Console.WriteLine("This requires arguments:");
+            requiredArgs.ToList().ForEach((x) => Console.WriteLine($"  [{x.Key}]: {x.Value}"));
             return true;
         }
 

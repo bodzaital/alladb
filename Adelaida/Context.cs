@@ -10,13 +10,19 @@ public class Context(string connectionString)
 	
 	public Document? Document { get; set; }
 
+	public Transaction? Transaction { get; set; }
+
 	public string GetHandle()
 	{
 		string editing = Document?.Id is not null
 			? $" editing {Document.Id}"
 			: string.Empty;
 
-		return $"{Collection?.Name ?? "no collection"}{editing}";
+		string dirtyFlag = Transaction is not null
+			? "*"
+			: string.Empty;
+
+		return $"{dirtyFlag}{Collection?.Name ?? "no collection"}{editing}";
 	}
 
 	public bool RequiresCollection()
@@ -35,6 +41,28 @@ public class Context(string connectionString)
         if (Document is null)
         {
             Console.WriteLine("This function requires a document.");
+            return true;
+        }
+
+        return false;
+    }
+
+    public bool RequiresTransaction()
+    {
+        if (Transaction is null)
+        {
+            Console.WriteLine("This function requires a transaction.");
+            return true;
+        }
+
+        return false;
+    }
+
+    public bool RequiresNoTransaction()
+    {
+        if (Transaction is not null)
+        {
+            Console.WriteLine("This function requires no transaction.");
             return true;
         }
 

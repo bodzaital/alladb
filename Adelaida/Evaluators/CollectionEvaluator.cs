@@ -18,8 +18,13 @@ public class CollectionEvaluator(Context ctx) : EvaluatorBase
     [EvaluatorDescription("Adds a new document with the specified fields to the end of the collection.")]
     public void AddDocument(string[] args)
     {
+        Dictionary<string, string> requiredArgs = new()
+        {
+            { "fields", "list of key=value, optionally enclosed in \" and the value typed with (T) prefix for primitive types" },
+        };
+
         if (ctx.RequiresCollection()) return;
-        if (RequiresArguments(args)) return;
+        if (RequiresArguments(args, requiredArgs)) return;
 
         Dictionary<string, object?> fields = args.ToList()
             .Select((x) => x.Split('='))
@@ -36,7 +41,6 @@ public class CollectionEvaluator(Context ctx) : EvaluatorBase
     {
         if (ctx.RequiresCollection()) return;
         if (ctx.RequiresDocument()) return;
-        if (RequiresArguments(args)) return;
         if (RequiresConfirmation()) return;
 
         ctx.Collection!.Remove(ctx.Document!);
@@ -58,8 +62,13 @@ public class CollectionEvaluator(Context ctx) : EvaluatorBase
     [EvaluatorDescription("Gets the document associated with the specified ID.")]
     public void GetDocument(string[] args)
     {
+        Dictionary<string, string> requiredArgs = new()
+        {
+            { "id", "ID of the document to get" },
+        };
+
         if (ctx.RequiresCollection()) return;
-        if (RequiresArguments(args)) return;
+        if (RequiresArguments(args, requiredArgs)) return;
 
         ctx.Document = ctx.Collection!.GetDocument(args[0]);
     }
@@ -69,7 +78,42 @@ public class CollectionEvaluator(Context ctx) : EvaluatorBase
     public void CloseCollection(string[] args)
     {
         if (ctx.RequiresCollection()) return;
+        if (ctx.RequiresNoTransaction()) return;
 
         ctx.Collection = null;
+    }
+
+    [EvaluatorMethod("create-transaction")]
+    [EvaluatorDescription("Creates a transaction over this collection")]
+    public void CreateTransaction(string[] args)
+    {
+        if (ctx.RequiresCollection()) return;
+        if (ctx.RequiresNoTransaction()) return;
+
+        ctx.Transaction = ctx.Collection!.CreateTransaction();
+    }
+
+    [EvaluatorMethod("commit")]
+    [EvaluatorDescription("Resolves the transaction by commiting the changes.")]
+    public void CommitTransaction(string[] args)
+    {
+        if (ctx.RequiresTransaction()) return;
+
+        ctx.Transaction!.Commit();
+        ctx.Transaction!.Dispose();
+
+        ctx.Transaction = null;
+    }
+
+    [EvaluatorMethod("roll-back")]
+    [EvaluatorDescription("Resolves the transaction by rolling back the changes.")]
+    public void RollbackTransaction(string[] args)
+    {
+        if (ctx.RequiresTransaction()) return;
+
+        ctx.Transaction!.Rollback();
+        ctx.Transaction!.Dispose();
+
+        ctx.Transaction = null;
     }
 }

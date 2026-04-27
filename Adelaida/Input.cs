@@ -123,7 +123,7 @@ public static class Input
 		if (autocompletedOption.Count == 0) return;
 
 		HandleBackspace(_stringBuilder.Length);
-		HandleAlphanumeric(autocompletedOption.First());
+		HandleAlphanumeric(autocompletedOption.First() + " ");
 	}
 
 	private static void RemoveLastKeys(int length = 1)
