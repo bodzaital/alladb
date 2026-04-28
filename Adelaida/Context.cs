@@ -29,7 +29,7 @@ public class Context(string connectionString)
 	{
 		if (Collection is null)
 		{
-			Console.WriteLine("This function requires a collection.");
+			Output.WriteLine(ConsoleColor.Red, "This function requires a collection.");
 			return true;
 		}
 
@@ -40,7 +40,7 @@ public class Context(string connectionString)
     {
         if (Document is null)
         {
-            Console.WriteLine("This function requires a document.");
+            Output.WriteLine(ConsoleColor.Red, "This function requires a document.");
             return true;
         }
 
@@ -51,7 +51,7 @@ public class Context(string connectionString)
     {
         if (Transaction is null)
         {
-            Console.WriteLine("This function requires a transaction.");
+            Output.WriteLine(ConsoleColor.Red, "This function requires a transaction.");
             return true;
         }
 
@@ -62,7 +62,7 @@ public class Context(string connectionString)
     {
         if (Transaction is not null)
         {
-            Console.WriteLine("This function requires no transaction.");
+            Output.WriteLine(ConsoleColor.Red, "This function requires no transaction.");
             return true;
         }
 

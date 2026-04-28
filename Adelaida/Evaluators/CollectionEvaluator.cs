@@ -11,7 +11,7 @@ public class CollectionEvaluator(Context ctx) : EvaluatorBase
 
         ctx.Collection!.Clear();
 
-        Console.WriteLine("collection cleared");
+        Output.WriteLine(ConsoleColor.Red, "collection cleared");
     }
 
     [EvaluatorMethod("add")]
@@ -32,7 +32,7 @@ public class CollectionEvaluator(Context ctx) : EvaluatorBase
 
         ctx.Collection!.Add(fields);
 
-        Console.WriteLine("document added");
+        Output.WriteLine(ConsoleColor.Green, "document added");
     }
 
     [EvaluatorMethod("remove")]
@@ -46,7 +46,7 @@ public class CollectionEvaluator(Context ctx) : EvaluatorBase
         ctx.Collection!.Remove(ctx.Document!);
         ctx.Document = null;
 
-        Console.WriteLine("document removed");
+        Output.WriteLine(ConsoleColor.Red, "document removed");
     }
 
     [EvaluatorMethod("get-documents")]
@@ -55,7 +55,7 @@ public class CollectionEvaluator(Context ctx) : EvaluatorBase
     {
         if (ctx.RequiresCollection()) return;
 
-        ctx.Collection!.GetDocuments().ForEach((x) => Console.WriteLine(x.Id));
+        ctx.Collection!.GetDocuments().ForEach((x) => Output.WriteLine(x.Id));
     }
 
     [EvaluatorMethod("get-document")]

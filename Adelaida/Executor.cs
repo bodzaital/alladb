@@ -18,11 +18,11 @@ public class Executor : Command<Executor.ReplSettings>
     {
         Context ctx = new(settings.ConnectionString);
         Evaluator evaluator = new(ctx);
-        Console.WriteLine("Adelaida CLI, REPL up and running.");
+        Output.WriteLine("Adelaida CLI, REPL up and running.");
 
         do
         {
-            Console.Write($"({ctx.GetHandle()}) > ");
+            Output.Write($"({ctx.GetHandle()}) > ");
 
             Input.Setup([.. evaluator.Evaluators()]);
             string userInput = Input.ReadLine();
@@ -44,7 +44,7 @@ public class Executor : Command<Executor.ReplSettings>
             evaluator.Evaluate(cmd, args);
         } while (evaluator.IsLooping);
 
-        Console.WriteLine("Bye!");
+        Output.WriteLine("Bye!");
 
         return 0;
     }

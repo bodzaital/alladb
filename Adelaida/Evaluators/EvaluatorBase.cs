@@ -14,8 +14,8 @@ public abstract class EvaluatorBase
     {
         if (args.Length == 0)
         {
-            Console.WriteLine("This requires arguments:");
-            requiredArgs.ToList().ForEach((x) => Console.WriteLine($"  [{x.Key}]: {x.Value}"));
+            Output.WriteLine(ConsoleColor.Red, "This requires arguments:");
+            requiredArgs.ToList().ForEach((x) => Output.WriteLine(ConsoleColor.Red, $"  [{x.Key}]: {x.Value}"));
             return true;
         }
 
@@ -24,10 +24,10 @@ public abstract class EvaluatorBase
 
     protected static bool RequiresConfirmation(string msg = "Are you sure?")
     {
-        Console.Write($"{msg} (y,N) > ");
+        Output.Write(ConsoleColor.Yellow, $"{msg} (y,N) > ");
         ConsoleKeyInfo answer = Console.ReadKey();
         
-        Console.WriteLine();
+        Output.WriteLine();
 
         return answer.Key != ConsoleKey.Y;
     }
@@ -56,8 +56,8 @@ public abstract class EvaluatorBase
 
         if (!value.Success)
         {
-            Console.WriteLine($"Failed to parse value '{input}' with regex.");
-            Console.WriteLine($"Parsed type was '{valueType}'.");
+            Output.WriteLine(ConsoleColor.Red, $"Failed to parse value '{input}' with regex.");
+            Output.WriteLine(ConsoleColor.Red, $"Parsed type was '{valueType}'.");
             throw new Exception("No field value.");
         }
 

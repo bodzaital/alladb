@@ -29,7 +29,7 @@ public static class Input
 
 	public static void WriteHistory()
 	{
-		_history.ToList().ForEach(Console.WriteLine);
+		_history.ToList().ForEach(Output.WriteLine);
 	}
 
 	public static string ReadLine()
@@ -89,7 +89,7 @@ public static class Input
 
 	private static void HandleAlphanumeric(string text)
 	{
-		Console.Write(text);
+		Output.Write(text);
 		_stringBuilder!.Append(text);
 	}
 
@@ -100,7 +100,7 @@ public static class Input
 
 	private static void HandleEnter()
 	{
-		Console.WriteLine();
+		Output.WriteLine();
 	}
 
 	private static void HandleBackspace(int length = 1)
@@ -108,7 +108,7 @@ public static class Input
 		RemoveLastKeys(length);
 
 		length.Times(() => MoveConsoleCursor(-1, 0));
-		length.Times(() => Console.Write(" "));
+		length.Times(() => Output.Write(" "));
 		length.Times(() => MoveConsoleCursor(-1, 0));
 	}
 

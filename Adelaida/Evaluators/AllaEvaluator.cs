@@ -9,7 +9,7 @@ public class AllaEvaluator(Context ctx) : EvaluatorBase
         if (RequiresConfirmation()) return;
 
         ctx.Db.DropDatabase();
-        Console.WriteLine("database dropped");
+        Output.WriteLine(ConsoleColor.Yellow, "database dropped");
     }
 
     [EvaluatorMethod("drop-collection")]
@@ -25,14 +25,14 @@ public class AllaEvaluator(Context ctx) : EvaluatorBase
         if (RequiresConfirmation()) return;
 
         ctx.Db.DropCollection(args[0]);
-        Console.WriteLine("collection dropped");
+        Output.WriteLine(ConsoleColor.Yellow, "collection dropped");
     }
 
     [EvaluatorMethod("get-collections")]
     [EvaluatorDescription("Get all collections in the database.")]
     public void GetCollections(string[] args)
     {
-        ctx.Db.GetCollections().ForEach((x) => Console.WriteLine($"{x.Name} ({x.GetDocuments().Count})"));
+        ctx.Db.GetCollections().ForEach((x) => Output.WriteLine($"{x.Name} ({x.GetDocuments().Count})"));
     }
 
     [EvaluatorMethod("get-collection")]
@@ -59,11 +59,11 @@ public class AllaEvaluator(Context ctx) : EvaluatorBase
         try
         {
             ctx.Db.Persist();
-            Console.WriteLine("database saved");
+            Output.WriteLine(ConsoleColor.Green, "database saved");
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Error: {e.Message}");
+            Output.WriteLine(ConsoleColor.Red, $"Error: {e.Message}");
         }
     }
 
@@ -73,11 +73,11 @@ public class AllaEvaluator(Context ctx) : EvaluatorBase
     {
         if (ctx.Collection is null && ctx.Document is null && ctx.Transaction is null)
         {
-            Console.WriteLine("Loaded database. Ready for commands.\n  List collections with \"get-collections\"");
+            Output.WriteLine("Loaded database. Ready for commands.\n  List collections with \"get-collections\"");
         }
 
-        if (ctx.Collection is not null) Console.WriteLine($"In a collection.\n  List documents with \"get-documents {ctx.Collection.Name}\"");
-        if (ctx.Document is not null) Console.WriteLine($"Currently editing a document\n  List fields with \"get-fields {ctx.Document.Id}\"");
-        if (ctx.Transaction is not null) Console.WriteLine($"In an active transaction.\n  Commit with \"commit\"\n  Roll back with \"roll-back\"");
+        if (ctx.Collection is not null) Output.WriteLine($"In a collection.\n  List documents with \"get-documents {ctx.Collection.Name}\"");
+        if (ctx.Document is not null) Output.WriteLine($"Currently editing a document\n  List fields with \"get-fields {ctx.Document.Id}\"");
+        if (ctx.Transaction is not null) Output.WriteLine($"In an active transaction.\n  Commit with \"commit\"\n  Roll back with \"roll-back\"");
     }
 }

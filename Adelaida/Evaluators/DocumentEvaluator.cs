@@ -13,7 +13,7 @@ public class DocumentEvaluator(Context ctx) : EvaluatorBase
 
         Dictionary<string, object?> fields = ctx.Document!.GetFields();
 
-        Console.WriteLine(JsonSerializer.Serialize(fields, PrettySerializer));
+        Output.WriteLine(JsonSerializer.Serialize(fields, PrettySerializer));
     }
 
     [EvaluatorMethod("remove-fields")]
@@ -31,7 +31,7 @@ public class DocumentEvaluator(Context ctx) : EvaluatorBase
         if (RequiresConfirmation()) return;
 
         ctx.Document!.Remove(args[0]);
-        Console.WriteLine("fields removed");
+        Output.WriteLine(ConsoleColor.Red, "fields removed");
     }
 
     [EvaluatorMethod("set-fields")]

@@ -38,7 +38,7 @@ public class Evaluator
         EvaluatorInfo? evaluatorInfo = _evaluators.Find((x) => x.Name == name);
         if (evaluatorInfo is null)
         {
-            Console.WriteLine($"No function called {name}.");
+            Output.WriteLine(ConsoleColor.Red, $"No function called {name}.");
             return;
         }
 
@@ -53,9 +53,9 @@ public class Evaluator
     {
         if (args.Length == 0)
         {
-            Console.WriteLine("List of functions:");
-            Console.WriteLine(string.Join(", ", Evaluators()));
-            Console.WriteLine("Type \"help [function]\" for more info.");
+            Output.WriteLine("List of functions:");
+            Output.WriteLine(string.Join(", ", Evaluators()));
+            Output.WriteLine("Type \"help [function]\" for more info.");
             return;
         }
 
@@ -80,17 +80,17 @@ public class Evaluator
                 ? $"{function.Key}: {function.Value}"
                 : function.Key;
 
-            Console.WriteLine(text);
+            Output.WriteLine(text);
             return;
         }
         else if (autocompletions.Count > 0)
         {
-            Console.WriteLine("List of functions:");
-            Console.WriteLine(string.Join(", ", autocompletions.Select((x) => x.Key)));
+            Output.WriteLine("List of functions:");
+            Output.WriteLine(string.Join(", ", autocompletions.Select((x) => x.Key)));
             return;
         }
 
-        Console.WriteLine("No function found.");
+        Output.WriteLine(ConsoleColor.Red, "No function found.");
     }
 
     [EvaluatorMethod("exit")]
