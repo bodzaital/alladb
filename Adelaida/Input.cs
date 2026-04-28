@@ -21,6 +21,7 @@ public static class Input
 	private static StringBuilder? _stringBuilder;
 	private static List<string> _completionSource = [];
 	private static Queue<string> _history { get; set; } = [];
+	private static int _historyCursor = 0;
 
 	public static void Setup(List<string> completionSource)
 	{
@@ -43,10 +44,10 @@ public static class Input
 			keyInfo = Console.ReadKey(true);
 
 			if (IsAlphanumeric(keyInfo.Key)) HandleAlphanumeric(keyInfo.KeyChar);
-			else if (ShouldEnter(keyInfo.Key)) HandleEnter();
-			else if (ShouldBackspace(keyInfo.Key) && CanBackspace()) HandleBackspace();
-			else if (ShouldTab(keyInfo.Key)) HandleTab();
-			else if (ShouldArrow(keyInfo.Key)) HandleArrow(keyInfo.Key);
+			else if (IsEnter(keyInfo.Key)) HandleEnter();
+			else if (IsBackspace(keyInfo.Key) && CanBackspace()) HandleBackspace();
+			else if (IsTab(keyInfo.Key)) HandleTab();
+			else if (IsArrow(keyInfo.Key)) HandleArrow(keyInfo.Key);
 		} while (keyInfo.Key != ConsoleKey.Enter);
 
 		string input = _stringBuilder.ToString();
@@ -59,29 +60,36 @@ public static class Input
 
 	private static void HandleArrow(ConsoleKey key)
 	{
-		if (key == ConsoleKey.UpArrow)
+		ConsoleKey[] historyNavigation = [ ConsoleKey.UpArrow, ConsoleKey.DownArrow ];
+
+		if (historyNavigation.Contains(key) && _history.Count > 0)
 		{
-			if (_history.Count > 0)
+			int dir = key == ConsoleKey.UpArrow ? 1 : -1;
+			int min = key == ConsoleKey.UpArrow ? 1 : 0;
+			
+			_historyCursor = Math.Clamp(_historyCursor + dir, min, _history.Count);
+			HandleBackspace(_stringBuilder!.Length);
+
+			if (_historyCursor > 0)
 			{
-				HandleBackspace(_stringBuilder!.Length);
-				_history.Last().ToList().ForEach(HandleAlphanumeric);
+				_history.ElementAt(new Index(_historyCursor, true)).ToList().ForEach(HandleAlphanumeric);
 			}
 		}
 	}
 
-	private static bool ShouldArrow(ConsoleKey key) =>
+	private static bool IsArrow(ConsoleKey key) =>
 		_arrowKeys.Contains(key);
 
 	private static bool IsAlphanumeric(ConsoleKey key) =>
 		!_controlKeys.Contains(key);
 
-	private static bool ShouldEnter(ConsoleKey key) =>
+	private static bool IsEnter(ConsoleKey key) =>
 		key == ConsoleKey.Enter;
 
-	private static bool ShouldBackspace(ConsoleKey key) =>
+	private static bool IsBackspace(ConsoleKey key) =>
 		key == ConsoleKey.Backspace;
 
-	private static bool ShouldTab(ConsoleKey key) =>
+	private static bool IsTab(ConsoleKey key) =>
 		key == ConsoleKey.Tab;
 
 	private static bool CanBackspace() =>
