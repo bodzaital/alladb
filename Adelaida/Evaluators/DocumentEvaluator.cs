@@ -53,6 +53,16 @@ public class DocumentEvaluator(Context ctx) : EvaluatorBase
 
         fields.ToList().ForEach((x) => ctx.Document!.AddOrUpdate(x.Key, x.Value));
 
-        Console.WriteLine($"{fields.Count} fields set");
+        Output.WriteLine(ConsoleColor.Green, $"{fields.Count} fields set");
+    }
+
+    [EvaluatorMethod("close-document")]
+    [EvaluatorDescription("Releases the current document from memory.")]
+    public void CloseDocument(string[] args)
+    {
+        if (ctx.RequiresCollection()) return;
+        if (ctx.RequiresDocument()) return;
+
+        ctx.Document = null;
     }
 }

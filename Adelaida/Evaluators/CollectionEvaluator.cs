@@ -80,6 +80,7 @@ public class CollectionEvaluator(Context ctx) : EvaluatorBase
         if (ctx.RequiresCollection()) return;
         if (ctx.RequiresNoTransaction()) return;
 
+        ctx.Document = null;
         ctx.Collection = null;
     }
 
