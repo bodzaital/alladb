@@ -9,6 +9,7 @@ public class AllaEvaluator(Context ctx) : EvaluatorBase
         if (RequiresConfirmation()) return;
 
         ctx.Db.DropDatabase();
+        ctx.IsDirty = true;
         Output.WriteLine(ConsoleColor.Yellow, "database dropped");
     }
 
@@ -25,6 +26,7 @@ public class AllaEvaluator(Context ctx) : EvaluatorBase
         if (RequiresConfirmation()) return;
 
         ctx.Db.DropCollection(args[0]);
+        ctx.IsDirty = true;
         Output.WriteLine(ConsoleColor.Yellow, "collection dropped");
     }
 
@@ -59,6 +61,7 @@ public class AllaEvaluator(Context ctx) : EvaluatorBase
         try
         {
             ctx.Db.Persist();
+            ctx.IsDirty = false;
             Output.WriteLine(ConsoleColor.Green, "database saved");
         }
         catch (Exception e)
@@ -79,5 +82,6 @@ public class AllaEvaluator(Context ctx) : EvaluatorBase
         if (ctx.Collection is not null) Output.WriteLine($"In a collection.\n  List documents with \"get-documents {ctx.Collection.Name}\"");
         if (ctx.Document is not null) Output.WriteLine($"Currently editing a document\n  List fields with \"get-fields {ctx.Document.Id}\"");
         if (ctx.Transaction is not null) Output.WriteLine($"In an active transaction.\n  Commit with \"commit\"\n  Roll back with \"roll-back\"");
+        if (ctx.IsDirty) Output.WriteLine("There are unsaved changes. Save them with \"persist\"");
     }
 }

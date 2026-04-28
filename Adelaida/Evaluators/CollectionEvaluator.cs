@@ -10,6 +10,7 @@ public class CollectionEvaluator(Context ctx) : EvaluatorBase
         if (RequiresConfirmation()) return;
 
         ctx.Collection!.Clear();
+        ctx.IsDirty = true;
 
         Output.WriteLine(ConsoleColor.Red, "collection cleared");
     }
@@ -31,6 +32,7 @@ public class CollectionEvaluator(Context ctx) : EvaluatorBase
             .ToDictionary((key) => key[0], (val) => ParseFieldValueWithType<object?>(val[1]));
 
         ctx.Collection!.Add(fields);
+        ctx.IsDirty = true;
 
         Output.WriteLine(ConsoleColor.Green, "document added");
     }
@@ -45,6 +47,7 @@ public class CollectionEvaluator(Context ctx) : EvaluatorBase
 
         ctx.Collection!.Remove(ctx.Document!);
         ctx.Document = null;
+        ctx.IsDirty = true;
 
         Output.WriteLine(ConsoleColor.Red, "document removed");
     }

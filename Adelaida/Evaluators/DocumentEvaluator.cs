@@ -31,6 +31,7 @@ public class DocumentEvaluator(Context ctx) : EvaluatorBase
         if (RequiresConfirmation()) return;
 
         ctx.Document!.Remove(args[0]);
+        ctx.IsDirty = true;
         Output.WriteLine(ConsoleColor.Red, "fields removed");
     }
 
@@ -52,6 +53,7 @@ public class DocumentEvaluator(Context ctx) : EvaluatorBase
             .ToDictionary((key) => key[0], (val) => ParseFieldValueWithType<object?>(val[1]));
 
         fields.ToList().ForEach((x) => ctx.Document!.AddOrUpdate(x.Key, x.Value));
+        ctx.IsDirty = true;
 
         Output.WriteLine(ConsoleColor.Green, $"{fields.Count} fields set");
     }

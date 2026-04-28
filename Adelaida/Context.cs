@@ -12,13 +12,15 @@ public class Context(string connectionString)
 
 	public Transaction? Transaction { get; set; }
 
+    public bool IsDirty { get; set; }
+
 	public string GetHandle()
 	{
 		string editing = Document?.Id is not null
 			? $" editing {Document.Id}"
 			: string.Empty;
 
-		string dirtyFlag = Transaction is not null
+		string dirtyFlag = IsDirty
 			? "*"
 			: string.Empty;
 
