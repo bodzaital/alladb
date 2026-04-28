@@ -16,6 +16,8 @@ public class Context(string connectionString)
 
 	public string GetHandle()
 	{
+        string collection = Collection?.Name ?? "no collection";
+
 		string editing = Document?.Id is not null
 			? $" editing {Document.Id}"
 			: string.Empty;
@@ -28,7 +30,15 @@ public class Context(string connectionString)
             ? [ "[", "]" ]
             : [ "(", ")" ];
 
-		return $"{parentheses.First()}{dirtyFlag}{Collection?.Name ?? "no collection"}{editing}{parentheses.Last()}";
+        string handle = string.Join(string.Empty, [
+            parentheses.First(),
+            dirtyFlag,
+            collection,
+            editing,
+            parentheses.Last()
+        ]);
+
+		return $"{handle}";
 	}
 
 	public bool RequiresCollection()
