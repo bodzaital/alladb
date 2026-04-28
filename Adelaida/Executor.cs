@@ -22,7 +22,7 @@ public class Executor : Command<Executor.ReplSettings>
 
         do
         {
-            Output.Write($"({ctx.GetHandle()}) > ");
+            Output.Write($"{ctx.GetHandle()} > ");
 
             Input.Setup([.. evaluator.Evaluators()]);
             string userInput = Input.ReadLine();

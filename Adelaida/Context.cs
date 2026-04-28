@@ -23,8 +23,12 @@ public class Context(string connectionString)
 		string dirtyFlag = IsDirty
 			? "*"
 			: string.Empty;
+        
+        string[] parentheses = Transaction is not null
+            ? [ "[", "]" ]
+            : [ "(", ")" ];
 
-		return $"{dirtyFlag}{Collection?.Name ?? "no collection"}{editing}";
+		return $"{parentheses.First()}{dirtyFlag}{Collection?.Name ?? "no collection"}{editing}{parentheses.Last()}";
 	}
 
 	public bool RequiresCollection()
