@@ -79,7 +79,7 @@ public class AllaEvaluator(Context ctx) : EvaluatorBase
             Output.WriteLine("Loaded database. Ready for commands.\n  List collections with \"get-collections\"");
         }
 
-        if (ctx.Collection is not null) Output.WriteLine($"In a collection.\n  List documents with \"get-documents {ctx.Collection.Name}\"");
+        if (ctx.Collection is not null) Output.WriteLine($"In a collection.\n  List documents with \"get-documents\"");
         if (ctx.Document is not null) Output.WriteLine($"Currently editing a document\n  List fields with \"get-fields {ctx.Document.Id}\"");
         if (ctx.Transaction is not null) Output.WriteLine($"In an active transaction.\n  Commit with \"commit\"\n  Roll back with \"roll-back\"");
         if (ctx.IsDirty) Output.WriteLine("There are unsaved changes. Save them with \"persist\"");
