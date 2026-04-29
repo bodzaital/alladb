@@ -36,6 +36,7 @@ public static class Input
 	public static string ReadLine()
 	{
 		_stringBuilder = new();
+		_historyCursor = 0;
 
 		ConsoleKeyInfo keyInfo;
 
