@@ -56,6 +56,64 @@ using (Transaction transaction1 = myCollection.CreateTransaction())
 }
 ```
 
+## Adelaida CLI
+
+The Adelaida project is a small CLI interface to database files. When called without arguments, the default connection string is `Data Source = .` meaning it will open the database.json file in the working directory.
+
+### Arguments
+
+- `-c` or `--connection`: Connection string for the database.
+- `-v` or `--verbose`: Enable verbose logging that is written once the REPL normally exits.
+
+Verbose logging is displayed when the REPL normall exists -- meaning that the `exit` function is called.
+
+### Usage
+
+When starting the REPL, the following handle is displayed:
+
+```
+(no collection) > _
+```
+
+Typing `help` and hitting [Enter] will display a list of available functions. Description of functions can be invoked with `help [name of function]`, for example:
+
+```
+(no collection) > help get-collection
+get-collection: Creates a collection in the database if the name does not already exist, or gets the collection in the database if the name already exists.
+```
+
+Function arguments are separated with a space, and multiple can be passed to certain functions:
+
+```
+(no collection) > add key1=value1 "key2=value with spaces"
+```
+
+The handle will appear differently based on the memory of the REPL. The REPL can load one collection, one document, and one transaction at the same time. The handle may have one or all of these decorations. The state of the REPL can be displayed using `status`.
+
+If a collection is loaded (with `get-collection collection_name`):
+
+```
+(collection_name) > _
+```
+
+If the database is changed, but not yet saved (after `add key=value`)
+
+```
+(*collection_name) > _
+```
+
+If a document is loaded (with `get-document document_id`):
+
+```
+(collection_name editing document_id) > _
+```
+
+If a transaction is created (with `create-transaction`):
+
+```
+[collection_name] > _
+```
+
 ## Reference
 
 ### AllaOptions
