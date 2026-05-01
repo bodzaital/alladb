@@ -14,7 +14,7 @@ public class Executor : Command<Executor.ReplSettings>
         public required string ConnectionString { get; init; }
 
         [CommandOption("-v|--verbose")]
-        [Description("Enabled verbose logging that is written once the REPL normally exits.")]
+        [Description("Enable verbose logging that is written once the REPL normally exits.")]
         [DefaultValue(false)]
         public required bool IsVerbose { get; init; }
     }
