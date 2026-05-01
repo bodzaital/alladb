@@ -44,7 +44,7 @@ public static class Input
 		{
 			keyInfo = Console.ReadKey(true);
 
-			if (IsAlphanumeric(keyInfo.Key)) HandleAlphanumeric(keyInfo.KeyChar);
+			if (IsAlphanumeric(keyInfo)) HandleAlphanumeric(keyInfo.KeyChar);
 			else if (IsEnter(keyInfo.Key)) HandleEnter();
 			else if (IsBackspace(keyInfo.Key) && CanBackspace()) HandleBackspace();
 			else if (IsTab(keyInfo.Key)) HandleTab();
@@ -81,8 +81,8 @@ public static class Input
 	private static bool IsArrow(ConsoleKey key) =>
 		_arrowKeys.Contains(key);
 
-	private static bool IsAlphanumeric(ConsoleKey key) =>
-		!_controlKeys.Contains(key);
+	private static bool IsAlphanumeric(ConsoleKeyInfo keyInfo) =>
+		!char.IsControl(keyInfo.KeyChar);
 
 	private static bool IsEnter(ConsoleKey key) =>
 		key == ConsoleKey.Enter;
