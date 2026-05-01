@@ -12,10 +12,21 @@ public class Executor : Command<Executor.ReplSettings>
         [Description("Connection string for the database")]
         [DefaultValue("Data Source = .")]
         public required string ConnectionString { get; init; }
+
+        [CommandOption("-v|--verbose")]
+        [Description("Enabled verbose logging that is written once the REPL normally exits.")]
+        [DefaultValue(false)]
+        public required bool IsVerbose { get; init; }
     }
     
     protected override int Execute(CommandContext context, ReplSettings settings, CancellationToken cancellationToken)
     {
+        if (settings.IsVerbose)
+        {
+            Output.WriteLine(ConsoleColor.Yellow, "Running in buffered verbose mode.");
+            BufferedLogger.Enable();
+        }
+
         Context ctx = new(settings.ConnectionString);
         Evaluator evaluator = new(ctx);
         Output.WriteLine("Adelaida CLI, REPL up and running.");
@@ -45,6 +56,11 @@ public class Executor : Command<Executor.ReplSettings>
         } while (evaluator.IsLooping);
 
         Output.WriteLine("Bye!");
+
+        if (settings.IsVerbose)
+        {
+            BufferedLogger.WriteLine();
+        }
 
         return 0;
     }
