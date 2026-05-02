@@ -56,6 +56,100 @@ using (Transaction transaction1 = myCollection.CreateTransaction())
 }
 ```
 
+## Adelaida CLI
+
+The Adelaida project is a small CLI interface to database files. When called without arguments, the default connection string is `Data Source = .` meaning it will open the database.json file in the working directory.
+
+### Arguments
+
+- `-c` or `--connection`: Connection string for the database.
+- `-v` or `--verbose`: Enable verbose logging that is written once the REPL normally exits.
+
+Verbose logging is displayed when the REPL normall exists -- meaning that the `exit` function is called.
+
+### Usage
+
+When starting the REPL, the following handle is displayed:
+
+```
+(no collection) > _
+```
+
+Typing `help` and hitting [Enter] will display a list of available functions. Description of functions can be invoked with `help [name of function]`, for example:
+
+```
+(no collection) > help get-collection
+get-collection: Creates a collection in the database if the name does not already exist, or gets the collection in the database if the name already exists.
+```
+
+Function arguments are separated with a space, and multiple can be passed to certain functions:
+
+```
+(no collection) > add key1=value1 "key2=value with spaces"
+```
+
+The handle will appear differently based on the memory of the REPL. The REPL can load one collection, one document, and one transaction at the same time. The handle may have one or all of these decorations. The state of the REPL can be displayed using `status`.
+
+If a collection is loaded (with `get-collection collection_name`):
+
+```
+(collection_name) > _
+```
+
+If the database is changed, but not yet saved (after `add key=value`)
+
+```
+(*collection_name) > _
+```
+
+If a document is loaded (with `get-document document_id`):
+
+```
+(collection_name editing document_id) > _
+```
+
+If a transaction is created (with `create-transaction`):
+
+```
+[collection_name] > _
+```
+
+### Functions
+
+**Function over the database**
+
+| Function name | Description | Arguments | Requires |
+| ------------- | ----------- | --------- | -------- |
+| `drop-database` | Removes all collections from the database. | ❌ | confirmation (y/n) |
+| `drop-collection` | Removes the collection whose name matches the specified name. | name: name of the collection | arguments, confirmation (y/n) |
+| `get-collections` | Get all collections in the database. | ❌ | ❌ |
+| `get-collection` | Creates a collection in the database if the name does not already exist, or gets the collection in the database if the name already exists. | name: name of the collection | arguments |
+| `persist` | Serializes the database based on the connection string and the serializer. | ❌ | no transaction |
+| `status` | Shows simple information regarding the current session. | ❌ | ❌ |
+
+**Functions over a collection**
+
+| Function name | Description | Arguments | Requires |
+| ------------- | ----------- | --------- | -------- |
+| `clear` | Removes all documents from the collection. | ❌ | collection, confirmation (y/n) |
+| `add` | Adds a new document with the specified fields to the end of the collection. | fields: list of key=value, optionally enclosed in " and the value typed with (T) prefix for primitive types | arguments, collection |
+| `remove` | Removes the specific document from the collection. | ❌ | collection, document, confirmation (y/n) |
+| `get-documents` | Get all documents of the collection. | ❌ | collection |
+| `get-document` | Get the document associated with the specified ID. | id: ID of the document to get | arguments, collection |
+| `close-collection` | Releaes the current collection from memory. | ❌ | collecion, no transaction |
+| `create-transaction` | Creates a transaction over this collection | ❌ | collection, no transaction |
+| `commit` | Resolves the transaction by commiting the changes. | ❌ | transaction |
+| `roll-back` | Resolves the transaction by rolling back the changes. | ❌ | transaction |
+
+**Functions over a document**
+
+| Function name | Description | Arguments | Requires |
+| ------------- | ----------- | --------- | -------- |
+| `get-fields` | Get all fields of the document. | ❌ | collection, document |
+| `remove-fields` | Removes the value with the specified key from the fields. | key: key of the field to remove | collection, document, arguments, confirmation (y/n) |
+| `set-fields` | Adds a field to the document if the key does not already exist, or updates a field in the document if the key already exists. | fields: list of key=value, optionally enclosed in \" and the value typed with (T) prefix for primitive types | collection, document, arguments |
+| `close-document` | Releases the current document from memory. | ❌ | collection, document |
+
 ## Reference
 
 ### AllaOptions
