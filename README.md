@@ -114,6 +114,42 @@ If a transaction is created (with `create-transaction`):
 [collection_name] > _
 ```
 
+### Functions
+
+**Function over the database**
+
+| Function name | Description | Arguments | Requires |
+| ------------- | ----------- | --------- | -------- |
+| `drop-database` | Removes all collections from the database. | ❌ | confirmation (y/n) |
+| `drop-collection` | Removes the collection whose name matches the specified name. | name: name of the collection | arguments, confirmation (y/n) |
+| `get-collections` | Get all collections in the database. | ❌ | ❌ |
+| `get-collection` | Creates a collection in the database if the name does not already exist, or gets the collection in the database if the name already exists. | name: name of the collection | arguments |
+| `persist` | Serializes the database based on the connection string and the serializer. | ❌ | no transaction |
+| `status` | Shows simple information regarding the current session. | ❌ | ❌ |
+
+**Functions over a collection**
+
+| Function name | Description | Arguments | Requires |
+| ------------- | ----------- | --------- | -------- |
+| `clear` | Removes all documents from the collection. | ❌ | collection, confirmation (y/n) |
+| `add` | Adds a new document with the specified fields to the end of the collection. | fields: list of key=value, optionally enclosed in " and the value typed with (T) prefix for primitive types | arguments, collection |
+| `remove` | Removes the specific document from the collection. | ❌ | collection, document, confirmation (y/n) |
+| `get-documents` | Get all documents of the collection. | ❌ | collection |
+| `get-document` | Get the document associated with the specified ID. | id: ID of the document to get | arguments, collection |
+| `close-collection` | Releaes the current collection from memory. | ❌ | collecion, no transaction |
+| `create-transaction` | Creates a transaction over this collection | ❌ | collection, no transaction |
+| `commit` | Resolves the transaction by commiting the changes. | ❌ | transaction |
+| `roll-back` | Resolves the transaction by rolling back the changes. | ❌ | transaction |
+
+**Functions over a document**
+
+| Function name | Description | Arguments | Requires |
+| ------------- | ----------- | --------- | -------- |
+| `get-fields` | Get all fields of the document. | ❌ | collection, document |
+| `remove-fields` | Removes the value with the specified key from the fields. | key: key of the field to remove | collection, document, arguments, confirmation (y/n) |
+| `set-fields` | Adds a field to the document if the key does not already exist, or updates a field in the document if the key already exists. | fields: list of key=value, optionally enclosed in \" and the value typed with (T) prefix for primitive types | collection, document, arguments |
+| `close-document` | Releases the current document from memory. | ❌ | collection, document |
+
 ## Reference
 
 ### AllaOptions
