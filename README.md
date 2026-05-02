@@ -65,7 +65,7 @@ The Adelaida project is a small CLI interface to database files. When called wit
 - `-c` or `--connection`: Connection string for the database.
 - `-v` or `--verbose`: Enable verbose logging that is written once the REPL normally exits.
 
-Verbose logging is displayed when the REPL normall exists -- meaning that the `exit` function is called.
+Verbose logging is displayed when the REPL normally exits -- meaning that the `exit` function is called. There are not much actual logging yet.
 
 ### Usage
 
